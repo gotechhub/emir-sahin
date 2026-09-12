@@ -12,9 +12,9 @@ Temiz portfolyo sürümü. `site/index.html` ziyaretçi sitesi; `admin/index.htm
 
 `npm start` komutuyla açılır. Portfolyo: http://127.0.0.1:8766/ — ayrı panel: http://127.0.0.1:8766/admin/.
 
-Panel değişiklikleri aynı tarayıcıdaki yerel taslaktır. Portföy düzenleyicide kapak görseli ve birden fazla video dosyası içe aktarılabilir; dosyalar `IndexedDB` içinde Blob olarak, yeniden kodlanmadan saklanır. Dosya boyutu için uygulama içi MB kesintisi yoktur; gerçek kullanılabilir alan tarayıcının disk kotasına bağlıdır. Video satırlarının yanındaki `×` ile mevcut videolar çıkarılabilir, yeni dosyalar aynı ekrandan eklenebilir. İçe aktarılan içerikler aynı tarayıcıdaki ziyaretçi sayfasında da çalışır.
+Panel değişiklikleri önce aynı tarayıcıdaki yerel taslağa kaydedilir. Portföy düzenleyicide kapak görseli ve birden fazla video dosyası içe aktarılabilir; dosyalar `IndexedDB` içinde Blob olarak, yeniden kodlanmadan saklanır. Dosya boyutu için uygulama içi MB kesintisi yoktur; gerçek kullanılabilir alan tarayıcının disk kotasına bağlıdır. Video satırlarının yanındaki `×` ile mevcut videolar çıkarılabilir, yeni dosyalar aynı ekrandan eklenebilir. Supabase bağlantısı kurulduğunda senkron işlemi içerik ve medya dosyalarını ortak kayda aktarır.
 
-Bu yerel taslak canlı ziyaretçilere otomatik yayımlanmaz; Supabase ve yetkili kullanıcı kurulumu tamamlanmış değildir. Sunucu kimlik doğrulaması olmadan paneli internete açmayın. Bu sürüm yalnızca ziyaretçi sitesini yayımlar.
+Supabase ortam değişkenleri tanımlı değilse panel yerel taslak modunda çalışır. Vercel’de tanımlandığında giriş Supabase Auth ile doğrulanır, `site_content` kaydı güncellenir ve Storage’daki medya URL’leri ziyaretçi sitesine aktarılır.
 
 ## Yayın
 
@@ -22,7 +22,7 @@ Bu yerel taslak canlı ziyaretçilere otomatik yayımlanmaz; Supabase ve yetkili
 `npm run build:vercel`: orijinal dosyaları doğrudan kullanan Vercel çıktısı üretir.
 Vercel proje kökü bu `v1` klasörüdür; `vercel.json` build/output ayarlarını içerir.
 
-Yayın adresindeki yönetim paneli: `https://alan-adin.example/admin/`. Giriş ekranı istemci tarafında çalışır; içerik taslakları tarayıcının `IndexedDB` alanında tutulduğu için bir tarayıcıda yapılan değişiklik başka cihazlara otomatik aktarılmaz. Çok kullanıcılı ve sunucu tarafı yetkilendirme için Supabase Auth ve veritabanı bağlantısı ayrıca kurulmalıdır.
+Yayın adresindeki yönetim paneli: `https://alan-adin.example/admin/`. Supabase ayarları yoksa içerik taslakları tarayıcıda tutulur; Supabase ayarlarıyla birlikte Auth, veritabanı ve Storage kullanılır.
 
 Supabase bağlantısı için Vercel proje ayarlarında Production ve Preview ortamlarına `SUPABASE_URL` ve `SUPABASE_PUBLISHABLE_KEY` değişkenlerini ekleyip yeniden deploy et. `supabase/storage-policies.sql` dosyasını, `portfolio-media` bucket’ını oluşturduktan sonra SQL Editor’da çalıştır. Admin girişi Supabase Auth’ta `respongo@gmail.com` kullanıcısına bağlanır; panelde kullanıcı adı olarak `admin` yazılabilir.
 
