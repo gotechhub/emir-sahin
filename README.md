@@ -24,4 +24,6 @@ Vercel proje kökü bu `v1` klasörüdür; `vercel.json` build/output ayarların
 
 Yayın adresindeki yönetim paneli: `https://alan-adin.example/admin/`. Giriş ekranı istemci tarafında çalışır; içerik taslakları tarayıcının `IndexedDB` alanında tutulduğu için bir tarayıcıda yapılan değişiklik başka cihazlara otomatik aktarılmaz. Çok kullanıcılı ve sunucu tarafı yetkilendirme için Supabase Auth ve veritabanı bağlantısı ayrıca kurulmalıdır.
 
+Supabase bağlantısı için Vercel proje ayarlarında Production ve Preview ortamlarına `SUPABASE_URL` ve `SUPABASE_PUBLISHABLE_KEY` değişkenlerini ekleyip yeniden deploy et. `supabase/storage-policies.sql` dosyasını, `portfolio-media` bucket’ını oluşturduktan sonra SQL Editor’da çalıştır. Admin girişi Supabase Auth’ta `respongo@gmail.com` kullanıcısına bağlanır; panelde kullanıcı adı olarak `admin` yazılabilir.
+
 `node scripts/verify.mjs` ile tüm orijinaller, proje bağlantıları ve ziyaretçi sayfasında admin bağlantısı bulunmadığı kontrol edilir.

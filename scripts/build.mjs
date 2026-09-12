@@ -16,6 +16,11 @@ fs.cpSync(path.join(root, 'admin'), path.join(dist, 'admin'), { recursive: true 
 for (const entry of fs.readdirSync(site)) {
   if (entry !== 'videos') fs.cpSync(path.join(site, entry), path.join(dist, entry), { recursive: true });
 }
+const runtimeConfig = {
+  url: process.env.SUPABASE_URL || '',
+  publishableKey: process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || ''
+};
+fs.writeFileSync(path.join(dist, 'runtime-config.js'), `window.__SUPABASE_CONFIG__=${JSON.stringify(runtimeConfig)};\n`);
 fs.mkdirSync(path.join(dist, 'videos'), { recursive: true });
 fs.mkdirSync(path.join(dist, 'chunks'), { recursive: true });
 const report = JSON.parse(fs.readFileSync(path.join(root, 'verification/original-videos.json')));
