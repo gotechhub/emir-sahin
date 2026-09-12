@@ -20,6 +20,7 @@ for(const record of report.videos){
 }
 for(const project of context.window.projects){assert(fs.existsSync(path.join(root,'site/assets',project.cover)),project.cover)}
 assert(fs.existsSync(path.join(root,'site/media-store.js')),'Media store missing');
+assert(fs.existsSync(path.join(root,'dist/admin/index.html')),'Published admin route missing');
 const adminHtml=fs.readFileSync(path.join(root,'admin/index.html'),'utf8');
 assert(/id="cover-file"[^>]*type="file"/.test(adminHtml),'Cover import input missing');
 assert(/id="video-files"[^>]*multiple/.test(adminHtml),'Multiple video import input missing');

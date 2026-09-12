@@ -9,7 +9,10 @@ const dist = path.join(root, 'dist');
 if (dist !== path.join(root, 'dist')) throw new Error('Unsafe output directory');
 fs.rmSync(dist, { recursive: true, force: true });
 fs.mkdirSync(dist, { recursive: true });
-// Public build intentionally excludes the separate admin application.
+// Keep the admin application on its own unlinked /admin/ route.
+// It shares the same origin as the public site so local browser drafts work,
+// while the public page itself contains no admin navigation or references.
+fs.cpSync(path.join(root, 'admin'), path.join(dist, 'admin'), { recursive: true });
 for (const entry of fs.readdirSync(site)) {
   if (entry !== 'videos') fs.cpSync(path.join(site, entry), path.join(dist, entry), { recursive: true });
 }
@@ -38,4 +41,4 @@ for (const record of report.videos) {
     type: /\.mov$/i.test(record.file) ? 'video/quicktime' : 'video/mp4' };
 }
 fs.writeFileSync(path.join(dist, 'media-map.js'), `window.originalMedia=${JSON.stringify(map)};\n`);
-console.log(`v1 ready: ${report.count} byte-identical original videos, ${report.bytes} bytes. ${Object.keys(map).length} large files delivered in lossless storage chunks. Admin excluded.`);
+console.log(`v1 ready: ${report.count} byte-identical original videos, ${report.bytes} bytes. ${Object.keys(map).length} large files delivered in lossless storage chunks. Admin available at /admin/ (unlinked).`);

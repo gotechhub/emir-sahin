@@ -1,6 +1,6 @@
 # Emir Selahattin Şahin — v1
 
-Temiz portfolyo sürümü. `site/index.html` ziyaretçi sitesi; `admin/index.html` ayrı yerel yönetim panelidir. Yönetim paneli yayın paketine dahil edilmez ve ziyaretçi sitesinde bağlantısı yoktur.
+Temiz portfolyo sürümü. `site/index.html` ziyaretçi sitesi; `admin/index.html` ayrı yönetim panelidir. Panel ziyaretçi sitesinde bağlantı olarak görünmez ve Vercel yayınında yalnızca gizli `/admin/` yolu üzerinden açılır.
 
 ## Videolar
 
@@ -18,8 +18,10 @@ Bu yerel taslak canlı ziyaretçilere otomatik yayımlanmaz; Supabase ve yetkili
 
 ## Yayın
 
-`npm run build`: orijinalleri doğrular ve Sites çıktısını `dist/` altında hazırlar.
+`npm run build`: orijinalleri doğrular ve yayın çıktısını `dist/` altında hazırlar.
 `npm run build:vercel`: orijinal dosyaları doğrudan kullanan Vercel çıktısı üretir.
 Vercel proje kökü bu `v1` klasörüdür; `vercel.json` build/output ayarlarını içerir.
 
-`node scripts/verify.mjs` ile tüm orijinaller, proje bağlantıları ve yönetim panelinin yayın dışında kaldığı kontrol edilir.
+Yayın adresindeki yönetim paneli: `https://alan-adin.example/admin/`. Giriş ekranı istemci tarafında çalışır; içerik taslakları tarayıcının `IndexedDB` alanında tutulduğu için bir tarayıcıda yapılan değişiklik başka cihazlara otomatik aktarılmaz. Çok kullanıcılı ve sunucu tarafı yetkilendirme için Supabase Auth ve veritabanı bağlantısı ayrıca kurulmalıdır.
+
+`node scripts/verify.mjs` ile tüm orijinaller, proje bağlantıları ve ziyaretçi sayfasında admin bağlantısı bulunmadığı kontrol edilir.
