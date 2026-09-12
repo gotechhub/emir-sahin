@@ -10,3 +10,4 @@
 @media(max-width:650px){.login-screen{padding:17px}.login-card{padding:26px 21px}.login-card h1{font-size:32px}.login-brand{margin-bottom:42px}.top-actions .logout-button{display:block;font-size:0;padding:9px}.top-actions .logout-button:after{content:'Çıkış';font-size:11px}}
 
 .confirm-pop[hidden]{display:none}
+.media-order{display:flex;gap:4px;flex:0 0 auto}.media-order button{width:27px;height:28px;padding:0;border:1px solid #4a4a4a;background:#191919;color:var(--accent);font-size:15px;line-height:1;border-radius:3px}.media-order button:hover:not(:disabled){background:#343923}.media-order button:disabled{opacity:.3;cursor:not-allowed}

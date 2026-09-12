@@ -5,6 +5,11 @@ create table if not exists public.site_content (
   updated_at timestamptz not null default now()
 );
 
+-- API rollerinin tabloya erişebilmesi için gerekli izinler.
+grant usage on schema public to anon, authenticated;
+grant select on table public.site_content to anon;
+grant select, insert, update, delete on table public.site_content to authenticated;
+
 alter table public.site_content enable row level security;
 
 -- The public portfolio can read the single published record.
