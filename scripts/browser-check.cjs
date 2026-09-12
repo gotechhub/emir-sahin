@@ -1,0 +1,55 @@
+const {chromium}=require('C:/Users/SG/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
+const fs=require('node:fs');
+const path=require('node:path');
+const assert=require('node:assert/strict');
+const root=path.resolve(__dirname,'..');
+(async()=>{
+  const browser=await chromium.launch({executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true});
+  const context=await browser.newContext({viewport:{width:1440,height:1000}});
+  const page=await context.newPage();
+  const errors=[];
+  page.on('pageerror',error=>errors.push(error.message));
+  await page.goto('http://127.0.0.1:8766/dist/');
+  assert.equal(await page.locator('a[href*="admin"]').count(),0);
+  await page.screenshot({path:path.join(root,'verification/desktop.png')});
+  const records=JSON.parse(fs.readFileSync(path.join(root,'verification/original-videos.json'))).videos;
+  const played=[];
+  // Verify every original can be decoded by Chrome, including the 71 MB hosted original.
+  for(const record of records){
+    await page.evaluate(file=>window.originalPlayer.play(file),record.file);
+    await page.waitForFunction(()=>document.querySelector('#player').readyState>=2,null,{timeout:45000});
+    const metadata=await page.locator('#player').evaluate(v=>({width:v.videoWidth,height:v.videoHeight,duration:v.duration,readyState:v.readyState}));
+    assert.equal(metadata.width,record.width,record.file);
+    assert.equal(metadata.height,record.height,record.file);
+    played.push({file:record.file,...metadata});
+    console.log('Decoded',record.file,metadata.width+'x'+metadata.height);
+  }
+  await page.evaluate(()=>window.originalPlayer.release());
+  await page.setViewportSize({width:390,height:844});
+  await page.reload();
+  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+  await page.screenshot({path:path.join(root,'verification/mobile.png')});
+  await page.locator('.featured-film').click();
+  await page.waitForFunction(()=>document.querySelector('#player').readyState>=2);
+  await page.screenshot({path:path.join(root,'verification/mobile-video.png')});
+  await page.locator('#close-player').click();
+  assert.equal(await page.locator('#player').getAttribute('src'),null);
+  await page.goto('http://127.0.0.1:8766/admin/');
+  assert.equal(await page.locator('.admin-app').getAttribute('hidden'),'');
+  assert.equal(await page.locator('#admin-login').isVisible(),true);
+  await page.locator('#login-form input[name="username"]').fill('admin');
+  await page.locator('#login-form input[name="password"]').fill('wrong');
+  await page.locator('#login-form button[type="submit"]').click();
+  assert.equal(await page.locator('#login-error').isVisible(),true);
+  await page.locator('#login-form input[name="username"]').fill('admin');
+  await page.locator('#login-form input[name="password"]').fill('emirem11');
+  await page.locator('#login-form button[type="submit"]').click();
+  await page.waitForFunction(()=>document.querySelector('.admin-app').hidden===false);
+  assert.equal(await page.locator('#stat-projects').innerText(),'21');
+  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+  await page.screenshot({path:path.join(root,'verification/admin-mobile.png')});
+  assert.equal(errors.length,0,errors.join('\n'));
+  fs.writeFileSync(path.join(root,'verification/browser-check.json'),JSON.stringify({decoded:played.length,played,errors,mobileWidth:390,adminSeparate:true},null,2));
+  await browser.close();
+  console.log('PASS: all 49 originals decoded at source dimensions; mobile, modal cleanup, and separate admin verified.');
+})().catch(error=>{console.error(error);process.exit(1)});

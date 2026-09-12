@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <base href="../site/">
+  <meta name="robots" content="noindex,nofollow">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Yönetim — Emir S. Şahin</title>
+  <meta name="theme-color" content="#141414">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23141414'/%3E%3Ctext x='9' y='46' font-family='Arial' font-weight='bold' font-size='40' fill='%23d8ff47'%3EE%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="../admin/base.css">
+  <link rel="stylesheet" href="../admin/admin.css">
+  <script src="projects.js" defer></script>
+  <script src="media-store.js" defer></script>
+  <script src="../admin/admin.js" defer></script>
+</head>
+<body>
+  <section id="admin-login" class="login-screen" aria-labelledby="login-title">
+    <div class="login-card">
+      <div class="login-brand"><span class="brand-mark">E</span><div><strong>EMİR S. ŞAHİN</strong><small>YÖNETİM PANELİ</small></div></div>
+      <span class="eyebrow">GÜVENLİ GİRİŞ</span><h1 id="login-title">Panele giriş yap</h1><p>Portföy içeriklerini yönetmek için kullanıcı bilgilerini gir.</p>
+      <form id="login-form" novalidate><label>Kullanıcı adı<input name="username" autocomplete="username" required autofocus></label><label>Parola<input name="password" type="password" autocomplete="current-password" required></label><p id="login-error" class="login-error" role="alert" hidden>Kullanıcı adı veya parola hatalı.</p><button class="lime-button" type="submit">Giriş yap <span aria-hidden="true">↗</span></button></form>
+      <a class="login-back" href="index.html">← Siteye dön</a>
+    </div>
+  </section>
+  <div class="admin-app" hidden>
+    <aside class="sidebar">
+      <div class="side-brand"><span class="brand-mark">E</span><div><strong>EMİR S. ŞAHİN</strong><small>YÖNETİM PANELİ</small></div></div>
+      <nav class="side-nav" aria-label="Yönetim menüsü">
+        <button class="nav-item active" data-view="overview"><span>⌂</span> Genel bakış</button>
+        <button class="nav-item" data-view="projects"><span>▦</span> Portföyler <b id="nav-count">21</b></button>
+        <button class="nav-item" data-view="content"><span>✎</span> Hakkında</button>
+        <button class="nav-item" data-view="settings"><span>⚙</span> Site ayarları</button>
+      </nav>
+      <div class="side-bottom"><div class="connection-dot"><i></i><span id="connection-label">Yerel taslak modu</span></div><a href="index.html" target="_blank" rel="noopener">Siteyi görüntüle ↗</a></div>
+    </aside>
+    <main class="admin-main">
+      <header class="admin-topbar"><button id="menu-toggle" class="icon-button" aria-label="Menüyü aç">☰</button><div><p class="top-kicker" id="view-kicker">ÇALIŞMA ALANI</p><h1 id="view-title">Genel bakış</h1></div><div class="top-actions"><span id="save-state" class="save-state">Kaydedildi</span><button class="outline-button" data-view="settings">Ayarlar <span>↗</span></button><button id="logout-button" class="outline-button logout-button" type="button">Çıkış</button></div></header>
+      <div id="toast" class="toast" role="status" aria-live="polite"></div>
+      <section id="view-overview" class="view active-view">
+        <div class="welcome"><div><span class="eyebrow">EMİR SELAHATTİN ŞAHİN</span><h2>Portfolyonun kontrolü<br>şimdi sende.</h2><p>İşlerini düzenle, yeni filmler ekle ve site metinlerini tek yerden güncel tut.</p></div><a href="index.html" target="_blank" rel="noopener" class="lime-button">Siteyi aç ↗</a></div>
+        <div class="stat-grid"><article class="stat-card"><span>TOPLAM PROJE</span><strong id="stat-projects">21</strong><small>Portfolyo seçkisi</small></article><article class="stat-card accent"><span>TOPLAM FİLM</span><strong id="stat-films">49</strong><small>İzlemeye hazır video</small></article><article class="stat-card"><span>ÖNE ÇIKAN</span><strong id="stat-featured">1</strong><small>Ana sayfa projesi</small></article></div>
+        <div class="overview-grid"><article class="panel recent-panel"><div class="panel-head"><div><span class="eyebrow">PORTFOLYO</span><h3>Son eklenen ve düzenlenen işler</h3></div><button class="text-button" data-view="projects">Tümünü gör →</button></div><div id="recent-projects" class="recent-list"></div></article><article class="panel quick-panel"><span class="eyebrow">HIZLI İŞLEMLER</span><h3>Bir sonraki adım</h3><button class="quick-action" data-action="new"><span>＋</span><div><strong>Yeni portföy ekle</strong><small>Bir marka veya proje oluştur</small></div><b>→</b></button><button class="quick-action" data-view="content"><span>✎</span><div><strong>Hakkında metnini düzenle</strong><small>Biyografini ve uzmanlıklarını güncelle</small></div><b>→</b></button><button class="quick-action" data-view="settings"><span>⚙</span><div><strong>İletişim bilgilerini güncelle</strong><small>E-posta, telefon ve sosyal medya</small></div><b>→</b></button></article></div>
+      </section>
+      <section id="view-projects" class="view"><div class="page-intro"><div><span class="eyebrow">İÇERİK YÖNETİMİ</span><h2>Portföyler</h2><p>Projelerini ekle, düzenle veya yayından kaldır.</p></div><button class="lime-button" data-action="new">＋ Yeni portföy</button></div><div class="toolbar"><label class="search"><span>⌕</span><input id="project-search" type="search" placeholder="Proje veya marka ara..." aria-label="Proje ara"></label><span id="project-result-count"></span></div><div id="project-list" class="project-admin-list"></div></section>
+      <section id="view-content" class="view"><div class="page-intro"><div><span class="eyebrow">SAYFA İÇERİĞİ</span><h2>Hakkında</h2><p>İnsanların Emir’i tanıdığı bölümün metinlerini düzenle.</p></div></div><form id="about-form" class="form-panel"><div class="form-heading"><span class="step">01</span><div><h3>Profil metni</h3><p>Portfolyo sayfasındaki hakkında alanı.</p></div></div><div class="form-grid"><label>Bölüm etiketi <input name="aboutLabel" required></label><label>Profil başlığı <input name="aboutName" required></label><label class="full">Kısa tanım <textarea name="aboutLead" rows="3" required></textarea></label><label class="full">Biyografi · 01 <textarea name="aboutP1" rows="5" required></textarea></label><label class="full">Biyografi · 02 <textarea name="aboutP2" rows="5" required></textarea></label><label>Konum etiketi <input name="caption" required></label><label>Uzmanlıklar <input name="practice" placeholder="Yönetmenlik, Kamera, Kurgu & renk"></label></div><div class="form-footer"><span>Değişiklikler tarayıcıya kaydedilir.</span><button class="lime-button" type="submit">Hakkında’yı kaydet</button></div></form></section>
+      <section id="view-settings" class="view"><div class="page-intro"><div><span class="eyebrow">GENEL YAPILANDIRMA</span><h2>Site ayarları</h2><p>İletişim bilgilerini, giriş metnini ve bağlantılarını güncel tut.</p></div></div><form id="settings-form" class="form-panel"><div class="form-heading"><span class="step">01</span><div><h3>Ana sayfa</h3><p>İlk ekranda görünen bilgiler.</p></div></div><div class="form-grid"><label>Üst etiket <input name="heroKicker" required></label><label>Konum <input name="location" required></label><label class="full">Giriş metni <textarea name="tagline" rows="3" required></textarea></label></div><div class="form-heading separated"><span class="step">02</span><div><h3>İletişim</h3><p>Şirketlerin sana ulaşacağı bilgiler.</p></div></div><div class="form-grid"><label>İletişim etiketi <input name="contactKicker" required></label><label>Başlık <input name="contactTitle" required></label><label>E-posta <input type="email" name="email" required></label><label>Telefon <input name="phone" required></label><label class="full">Instagram bağlantısı <input type="url" name="instagram" required></label></div><div class="form-footer"><span>Değişiklikler bu tarayıcıdaki yerel taslağa kaydedilir.</span><button class="lime-button" type="submit">Ayarları kaydet</button></div></form><div class="form-panel integration-panel"><div class="form-heading"><span class="step">03</span><div><h3>Bağlantılar</h3><p>Üretim ortamı bağlantılarını hazırla.</p></div></div><div class="integration-row"><span class="service-icon github">GH</span><div><strong>GitHub</strong><small>gotechhub/emir-sahin</small></div><span class="integration-state">Kaynak mevcut</span></div><div class="integration-row"><span class="service-icon vercel">V</span><div><strong>Vercel</strong><small>vercel.json hazır · deploy için token gerekir</small></div><span class="integration-state pending">Bekliyor</span></div><div class="integration-row"><span class="service-icon supabase">S</span><div><strong>Supabase</strong><small>Bağlantı ve yetkili kullanıcı kurulumu bekliyor</small></div><span class="integration-state pending">Bekliyor</span></div><div class="form-grid integration-fields"><label>Supabase proje URL’i <input name="supabaseUrl" placeholder="https://ornek.supabase.co"></label><label>Anon key <input name="supabaseAnonKey" type="password" placeholder="eyJ..."></label></div><div class="integration-actions"><button type="button" id="sync-supabase" class="outline-button">Supabase’a senkronize et ↗</button><small>Tablo adı: <code>site_content</code>. Anon key sadece bu tarayıcıda tutulur.</small></div><p class="integration-note">Bağlantı eklenene kadar verileri kaybetmemek için tarayıcıda yerel yedek tutulur.</p></div></section>
+    </main>
+  </div>
+  <dialog id="project-dialog">
+    <form id="project-form" method="dialog">
+      <div class="dialog-head"><div><span class="eyebrow">PORTFOLYO</span><h2 id="dialog-title">Yeni portföy</h2></div><button type="button" class="close-button" id="close-dialog" aria-label="Kapat">✕</button></div>
+      <input type="hidden" name="id">
+      <div class="form-grid">
+        <label>Marka / sanatçı <input name="brand" required placeholder="Örn. Mavi"></label>
+        <label>Proje başlığı <input name="title" required placeholder="Örn. Yaz kampanyası"></label>
+        <label class="full">Emir’in görevi <input name="role" required placeholder="Yönetmen · Kamera operatörü"></label>
+        <div class="full media-editor"><label>Kapak görseli</label><div class="cover-editor"><div id="cover-preview" class="cover-preview" hidden><img alt="Kapak önizlemesi"><button type="button" id="remove-cover" class="media-remove" aria-label="Kapağı kaldır">×</button></div><div class="media-inputs"><input name="cover" placeholder="assets/poster-5.jpg veya https://..."><label class="upload-button">Dosyadan içe aktar <input id="cover-file" type="file" accept="image/*"></label></div></div><small class="field-help">Mevcut kapak yolunu/URL’yi kullanabilir veya bilgisayarından bir görsel içe aktarabilirsin. Dosya boyutu için yapay bir sınır yoktur.</small></div>
+        <div class="full media-editor"><label>Video dosyaları</label><div id="video-list" class="media-list" aria-live="polite"></div><label class="upload-button">＋ Bir veya birden fazla video içe aktar <input id="video-files" type="file" accept="video/*,.mov,.mp4,.m4v,.webm" multiple></label><textarea name="files" rows="4" placeholder="videos/proje-01.mp4&#10;https://.../video.mp4"></textarea><small class="field-help">Her satıra bir video yolu/URL’si yazabilir veya yukarıdan birden fazla dosya seçebilirsin. Satırlardaki × ile videoları projeden çıkarabilirsin.</small></div>
+        <label class="check-label"><input type="checkbox" name="featured"> Ana sayfada öne çıkar</label>
+      </div>
+      <div class="dialog-footer"><button type="button" class="outline-button" id="cancel-dialog">İptal</button><button class="lime-button" type="submit">Portföyü kaydet</button></div>
+    </form>
+  </dialog>
+  <div id="confirm-dialog" class="confirm-pop" hidden><div><strong>Bu portföy silinsin mi?</strong><p>İstersen daha sonra tekrar ekleyebilirsin.</p><button id="confirm-delete" class="danger-button">Sil</button><button id="cancel-delete" class="outline-button">Vazgeç</button></div></div>
+</body>
+</html>

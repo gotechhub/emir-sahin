@@ -1,0 +1,6 @@
+dist/
+stage/
+node_modules/
+.sites-runtime/
+verification/*.png
+verification/browser-check.json

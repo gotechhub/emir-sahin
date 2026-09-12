@@ -1,0 +1,11 @@
+{
+  "name": "emir-sahin-portfolio",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Emir Selahattin Şahin portfolio and admin dashboard",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "build:vercel": "node scripts/build.mjs --vercel",
+    "start": "node scripts/serve.mjs"
+  }
+}
