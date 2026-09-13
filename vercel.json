@@ -1,6 +1,21 @@
 {
   "cleanUrls": true,
+  "redirects": [
+    { "source": "/admin/:path*", "has": [{ "type": "host", "value": "emir-sahin-web-site.vercel.app" }], "destination": "https://emrsahin.com/admin/", "permanent": true },
+    { "source": "/admin/:path*", "has": [{ "type": "host", "value": "www.emrsahin.com" }], "destination": "https://emrsahin.com/admin/", "permanent": true },
+    { "source": "/index.html", "destination": "/", "permanent": true }
+  ],
+  "rewrites": [
+    { "source": "/", "destination": "/api/page?kind=home" },
+    { "source": "/projeler/:id", "destination": "/api/page?kind=project&id=:id" },
+    { "source": "/albumler/:id", "destination": "/api/page?kind=album&id=:id" },
+    { "source": "/sitemap.xml", "destination": "/api/page?kind=sitemap" },
+    { "source": "/llms.txt", "destination": "/api/page?kind=llms" }
+  ],
+  "functions": { "api/page.js": { "includeFiles": "site/index.html", "maxDuration": 15 } },
   "headers": [
+    { "source": "/admin/:path*", "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }, { "key": "Cache-Control", "value": "no-store" }] },
+    { "source": "/runtime-config.js", "headers": [{ "key": "Cache-Control", "value": "no-store" }] },
     {
       "source": "/(.*)",
       "headers": [

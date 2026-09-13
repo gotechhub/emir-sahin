@@ -4,3 +4,6 @@ node_modules/
 .sites-runtime/
 verification/*.png
 verification/browser-check.json
+gcm-diagnose.log
+verification/*.html
+verification/font.css

@@ -2,6 +2,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
+const require=createRequire(import.meta.url);
+const render=require('../site/render.js');
+const defaultContent=require('../site/content.json');
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const site = path.join(root, 'site');
@@ -21,6 +25,7 @@ const runtimeConfig = {
   publishableKey: process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || ''
 };
 fs.writeFileSync(path.join(dist, 'runtime-config.js'), `window.__SUPABASE_CONFIG__=${JSON.stringify(runtimeConfig)};\n`);
+fs.writeFileSync(path.join(dist,'index.html'),render.page(fs.readFileSync(path.join(site,'index.html'),'utf8'),defaultContent));
 fs.mkdirSync(path.join(dist, 'videos'), { recursive: true });
 fs.mkdirSync(path.join(dist, 'chunks'), { recursive: true });
 const report = JSON.parse(fs.readFileSync(path.join(root, 'verification/original-videos.json')));

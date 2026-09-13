@@ -3,11 +3,21 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
+const require=createRequire(import.meta.url);
+const pageHandler=require('../api/page.js');
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const types = {'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.jpg':'image/jpeg','.png':'image/png','.mov':'video/quicktime','.mp4':'video/mp4','.part':'application/octet-stream'};
+const types = {'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.jpg':'image/jpeg','.png':'image/png','.svg':'image/svg+xml','.woff2':'font/woff2','.json':'application/json','.txt':'text/plain; charset=utf-8','.mov':'video/quicktime','.mp4':'video/mp4','.part':'application/octet-stream'};
 http.createServer((req, res) => {
   let pathname;
   try { pathname = decodeURIComponent(new URL(req.url, 'http://localhost').pathname); } catch { res.writeHead(400).end(); return; }
+  if(pathname==='/'||/^\/(projeler|albumler)\//.test(pathname)||['/sitemap.xml','/llms.txt'].includes(pathname)){
+    const parts=pathname.split('/').filter(Boolean);
+    req.query={kind:parts[0]==='projeler'?'project':parts[0]==='albumler'?'album':parts[0]==='sitemap.xml'?'sitemap':parts[0]==='llms.txt'?'llms':'home',id:parts[1]};
+    pageHandler(req,res).catch(()=>res.writeHead(500).end('Page unavailable'));return;
+  }
+  if(pathname==='/admin'){res.writeHead(302,{Location:'/admin/'}).end();return}
+  if(pathname==='/runtime-config.js'&&process.env.SUPABASE_URL){res.writeHead(200,{'Content-Type':'text/javascript','Cache-Control':'no-store'}).end('window.__SUPABASE_CONFIG__='+JSON.stringify({url:process.env.SUPABASE_URL,publishableKey:process.env.SUPABASE_PUBLISHABLE_KEY||process.env.SUPABASE_ANON_KEY}));return}
   let relative = pathname.replace(/^\//, '');
   if (!/^(admin|site|dist)\//.test(relative)) relative = 'site/' + relative;
   if (relative.endsWith('/')) relative += 'index.html';
@@ -32,4 +42,4 @@ http.createServer((req, res) => {
   stream.on('error', () => res.destroy());
   res.on('close', () => stream.destroy());
   stream.pipe(res);
-}).listen(8766, '127.0.0.1', () => console.log('v1: http://127.0.0.1:8766/ · separate admin: http://127.0.0.1:8766/admin/ · hosting build: http://127.0.0.1:8766/dist/'));
+}).listen(Number(process.env.PORT||8766), '127.0.0.1', () => console.log('Portfolio preview ready'));

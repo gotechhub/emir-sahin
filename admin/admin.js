@@ -1,25 +1,15 @@
-const AUTH_STORAGE_KEY='emirAdminAuth.v1';
-const SUPABASE_SESSION_KEY='emirSupabaseSession.v1';
-const AUTH_USER='admin';
 const SUPABASE_ADMIN_EMAIL='respongo@gmail.com';
-const AUTH_PASSWORD_HASH='57083316973eacaac054ea9dc129260c46498af7d2b96d30cc964541987a5dd9';
+const ADMIN_URL='https://emrsahin.com/admin/';
 const loginScreen=document.querySelector('#admin-login');
 const adminApp=document.querySelector('.admin-app');
 const loginError=document.querySelector('#login-error');
-function sessionGet(key){try{return window.sessionStorage?.getItem(key)}catch(e){return null}}
-function sessionSet(key,value){try{window.sessionStorage?.setItem(key,value)}catch(e){}}
-function sessionRemove(key){try{window.sessionStorage?.removeItem(key)}catch(e){}}
-async function passwordHash(value){if(!window.crypto?.subtle)return '';const bytes=new TextEncoder().encode(value);const digest=await window.crypto.subtle.digest('SHA-256',bytes);return Array.from(new Uint8Array(digest),byte=>byte.toString(16).padStart(2,'0')).join('')}
-function setAuthenticated(authenticated){loginScreen.hidden=authenticated;adminApp.hidden=!authenticated;if(authenticated){loginError.hidden=true;document.body.classList.add('admin-authenticated')}else{document.body.classList.remove('admin-authenticated');document.querySelector('#login-form input[name="password"]').value='';document.querySelector('#login-form input[name="username"]').focus()}}
-function runtimeConfig(){const config=window.__SUPABASE_CONFIG__||{};return {url:String(config.url||'').replace(/\/$/,''),key:String(config.publishableKey||config.anonKey||'')}}
-function configuredSupabase(){const runtime=runtimeConfig();const urlInput=document.querySelector('#view-settings input[name="supabaseUrl"]');const keyInput=document.querySelector('#view-settings input[name="supabaseAnonKey"]');const saved=typeof state==='object'&&state?.site?{url:String(state.site.supabaseUrl||'').replace(/\/$/,''),key:String(state.site.supabaseAnonKey||'')}:{url:'',key:''};const typedUrl=String(urlInput?.value||'').trim().replace(/\/$/,'');const typedKey=String(keyInput?.value||'').trim();return {url:typedUrl||saved.url||runtime.url,key:typedKey||saved.key||runtime.key}}
-async function supabaseSignIn(email,password){const config=configuredSupabase();if(!config.url||!config.key)throw new Error('Supabase ayarları eksik');const response=await fetch(`${config.url}/auth/v1/token?grant_type=password`,{method:'POST',headers:{apikey:config.key,'Content-Type':'application/json'},body:JSON.stringify({email,password})});const data=await response.json().catch(()=>({}));if(!response.ok||!data.access_token)throw new Error(data.error_description||data.msg||'Supabase girişi başarısız');return data}
-async function handleLogin(event){event.preventDefault();const form=event.currentTarget;const username=form.elements.username.value.trim();const password=form.elements.password.value;let valid=false;const config=configuredSupabase();if(config.url&&config.key){try{const email=username.includes('@')?username:SUPABASE_ADMIN_EMAIL;const session=await supabaseSignIn(email,password);sessionSet(SUPABASE_SESSION_KEY,session.access_token);valid=true}catch(error){console.warn('Supabase girişi başarısız',error)}}else{valid=username===AUTH_USER&&(await passwordHash(password))===AUTH_PASSWORD_HASH}if(!valid){loginError.hidden=false;form.elements.password.value='';form.elements.password.focus();return}sessionSet(AUTH_STORAGE_KEY,'1');setAuthenticated(true)}
-function logout(){sessionRemove(AUTH_STORAGE_KEY);sessionRemove(SUPABASE_SESSION_KEY);setAuthenticated(false)}
-document.querySelector('#login-form').addEventListener('submit',handleLogin);
-document.querySelector('#logout-button').addEventListener('click',logout);
-setAuthenticated(sessionGet(AUTH_STORAGE_KEY)==='1');
-
+function setAuthenticated(value){loginScreen.hidden=value;adminApp.hidden=!value;document.body.classList.toggle('admin-authenticated',value);if(!value)document.querySelector('#login-form [name="password"]').value=''}
+function runtimeConfig(){return window.__SUPABASE_CONFIG__||{}}
+const cloud=PortfolioCloud.createClient(runtimeConfig());
+const DRAFT_KEY='emirPortfolioDraft.v2';
+let revision=null, dirty=false, generation=0, initialized=false, saving=null, retryTimer=null, retryCount=0;
+let conflict=false;
+const uploaded=new Map();
 const STORAGE_KEY='emirPortfolioData.v1';
 const DEFAULT_SITE={heroKicker:'YÖNETMEN & FİLM YAPIMCISI',location:'İSTANBUL, TR',tagline:'Moda, reklam\nve hareketli görüntü.',aboutLabel:'KAMERA ARKASINDA',aboutName:'Emir Selahattin\nŞahin.',aboutLead:'Moda, reklam ve dijital içerik alanlarında çalışan bağımsız yönetmen ve film yapımcısı.',aboutP1:'Kadir Has Üniversitesi Sinema ve Televizyon Bölümü’nde eğitim aldı. Kariyerine Tolan Film’de başladı; kamera, prodüksiyon ve backstage çalışmalarının ardından kısa film projelerinde görüntü yönetmenliği yaptı.',aboutP2:'No. Studio ile Mavi, DESA ve Communite gibi markaların projelerinde kamera operatörlüğü, yardımcı yönetmenlik ve kurgu görevleri üstlendi. İlk moda filmi yönetmenliğini DESA’nın #KendiniYaşa kampanyasında gerçekleştirdi.',practice:['Yönetmenlik','Kamera','Kurgu & renk'],caption:'Beşiktaş, İstanbul',contactKicker:'YENİ PROJELER İÇİN',contactTitle:'Birlikte çalışalım.',email:'sahinemir@outlook.com',phone:'+90 542 417 18 14',instagram:'https://www.instagram.com/emir.mov/',supabaseUrl:'',supabaseAnonKey:''};
 const original=Array.isArray(window.projects)?window.projects:[];
@@ -30,7 +20,7 @@ function esc(value){return String(value??'').replace(/[&<>"']/g,character=>htmlE
 function storageGet(key){try{if(window.localStorage)return window.localStorage.getItem(key)}catch(e){}return memoryFallback[key]||null}
 function storageSet(key,value){try{if(window.localStorage){window.localStorage.setItem(key,value);return}}catch(e){}memoryFallback[key]=value}
 function load(){try{const x=JSON.parse(storageGet(STORAGE_KEY)||'null');const site={...DEFAULT_SITE,...(x?.site||{})};Object.keys(DEFAULT_SITE).forEach(key=>{if(site[key]===''&&DEFAULT_SITE[key])site[key]=DEFAULT_SITE[key]});return {site,projects:Array.isArray(x?.projects)?x.projects:original.map(item=>({...item}))}}catch(e){return {site:{...DEFAULT_SITE},projects:original.map(item=>({...item}))}}}
-let state=load();
+let state={...load(),albums:[]};
 let pendingDelete=null;
 let editorFileRefs=[];
 let pendingVideoFiles=[];
@@ -40,11 +30,22 @@ let coverPreviewUrl=null;
 
 function isMediaRef(value){return mediaStore?.isRef?.(value)===true}
 function mediaPath(value){if(!value)return 'assets/poster-5.jpg';return value.startsWith('assets/')||value.startsWith('videos/')||/^https?:\/\//i.test(value)?value:'assets/'+value}
-function collectMedia(project){return [project?.cover,...(project?.files||[])].filter(isMediaRef)}
-async function cleanupMedia(refs){const used=new Set(state.projects.flatMap(project=>collectMedia(project)));for(const ref of refs){if(!used.has(ref)){try{await mediaStore?.remove?.(ref)}catch(e){console.warn('Medya temizlenemedi',e)}}}}
+function collectMedia(project){return [project?.cover,...(project?.files||[]),...(project?.photos||[]).map(photo=>photo.src)].filter(isMediaRef)}
+async function cleanupMedia(refs){const used=new Set([...state.projects,...(state.albums||[])].flatMap(project=>collectMedia(project)));for(const ref of refs){if(!used.has(ref)){try{await mediaStore?.remove?.(ref)}catch(e){console.warn('Medya temizlenemedi',e)}}}}
 function setImageSource(img,ref){img.src=mediaPath(ref);if(isMediaRef(ref)){mediaStore.resolve(ref).then(result=>{if(result)img.src=result.url}).catch(()=>{})}}
 function formatBytes(bytes){if(!Number.isFinite(bytes))return '';if(bytes<1024*1024)return Math.max(1,Math.round(bytes/1024))+' KB';return (bytes/(1024*1024)).toFixed(1)+' MB'}
-function persist(message='Kaydedildi'){storageSet(STORAGE_KEY,JSON.stringify(state));const node=document.querySelector('#save-state');node.textContent=message;node.classList.remove('unsaved');toast(message)}
+function setSaveStatus(message,status='ready'){
+  const node=document.querySelector('#save-state');node.textContent=message;node.dataset.status=status;
+  document.querySelector('#connection-label').textContent=status==='ready'?'Canlı siteye bağlı':message;
+}
+function saveDraft(){
+  try{window.localStorage.setItem(DRAFT_KEY,JSON.stringify({state,revision,dirty}));return true}
+  catch(_){setSaveStatus('Tarayıcı taslağı saklayamadı; sayfayı açık tut','error');return false}
+}
+function persist(){
+  dirty=true;generation++;saveDraft();setSaveStatus('Yayınlanıyor…','saving');
+  return syncSupabase();
+}
 function toast(message){const n=document.querySelector('#toast');n.textContent=message;n.classList.add('show');clearTimeout(window.__toast);window.__toast=setTimeout(()=>n.classList.remove('show'),2600)}
 function renderOverview(){const projects=state.projects;document.querySelector('#stat-projects').textContent=projects.length;document.querySelector('#stat-films').textContent=projects.reduce((n,p)=>n+(p.files?.length||0),0);document.querySelector('#stat-featured').textContent=projects.filter(p=>p.featured).length;document.querySelector('#nav-count').textContent=projects.length;const recent=document.querySelector('#recent-projects');recent.replaceChildren();projects.slice(0,5).forEach(p=>{const row=document.createElement('div');row.className='recent-row';row.innerHTML='<img class="recent-thumb" alt=""><div><strong>'+esc(p.brand)+'</strong><small>'+esc(p.title)+'</small></div><span>'+(p.files?.length||0)+' film</span>';recent.append(row);setImageSource(row.querySelector('img'),p.cover)})}
 function renderProjects(){const list=document.querySelector('#project-list');const query=(document.querySelector('#project-search').value||'').toLowerCase().trim();const filtered=state.projects.filter(p=>`${p.brand} ${p.title} ${p.role}`.toLowerCase().includes(query));document.querySelector('#project-result-count').textContent=`${filtered.length} proje`;list.replaceChildren();if(!filtered.length){list.innerHTML='<div class="empty-row">Aramanla eşleşen bir proje yok.</div>';return}filtered.forEach(p=>{const row=document.createElement('article');row.className='project-admin-row';row.innerHTML='<img alt=""><div><strong>'+esc(p.brand)+'</strong><small>'+esc(p.title)+'</small></div><div class="role-cell">'+esc(p.role||'Görev eklenmemiş')+'</div><div><small>'+(p.files?.length||0)+' film'+(p.featured?' · Öne çıkan':'')+'</small></div><div class="project-actions"><button data-edit="'+esc(p.id)+'">Düzenle</button><button class="delete" data-delete="'+esc(p.id)+'">Sil</button></div>';list.append(row);setImageSource(row.querySelector('img'),p.cover)});list.querySelectorAll('[data-edit]').forEach(button=>button.onclick=()=>openEditor(button.dataset.edit));list.querySelectorAll('[data-delete]').forEach(button=>button.onclick=()=>askDelete(button.dataset.delete))}
@@ -60,15 +61,124 @@ function renderVideoList(){const list=document.querySelector('#video-list');list
 function syncFilesField(){const field=document.querySelector('#project-form [name="files"]');editorFileRefs=field.value.split(/\r?\n/).map(value=>value.trim()).filter(Boolean);renderVideoList()}
 function resetEditorMedia(){pendingVideoFiles=[];pendingCoverFile=null;removedMediaRefs=new Set();clearCoverPreview();const coverFile=document.querySelector('#cover-file');const videoFiles=document.querySelector('#video-files');if(coverFile)coverFile.value='';if(videoFiles)videoFiles.value=''}
 function openEditor(id){const form=document.querySelector('#project-form');const project=id?state.projects.find(item=>item.id===id):{id:'',brand:'',title:'',role:'',cover:'assets/poster-5.jpg',files:[],featured:false};if(!project)return;resetEditorMedia();document.querySelector('#dialog-title').textContent=id?'Portföyü düzenle':'Yeni portföy';form.reset();fillForm(form,{...project,files:(project.files||[]).join('\n')});editorFileRefs=[...(project.files||[])];renderVideoList();renderCoverPreview(project.cover||'assets/poster-5.jpg');document.querySelector('#project-dialog').showModal()}
-async function saveProject(form){const saveButton=form.querySelector('button[type="submit"]');const oldProject=state.projects.find(item=>item.id===form.elements.id.value);const created=[];saveButton.disabled=true;saveButton.textContent='Dosyalar kaydediliyor…';try{let cover=form.elements.cover.value.trim()||'assets/poster-5.jpg';if(pendingCoverFile){const id=await mediaStore.put(pendingCoverFile);cover='upload:'+id;created.push(cover)}const imported=[];for(const file of pendingVideoFiles){const id=await mediaStore.put(file);const ref='upload:'+id;created.push(ref);imported.push(ref)}const data={id:form.elements.id.value||`project-${Date.now()}`,brand:form.elements.brand.value.trim(),title:form.elements.title.value.trim(),role:form.elements.role.value.trim(),cover,files:[...editorFileRefs,...imported],featured:form.elements.featured.checked};const oldIndex=state.projects.findIndex(item=>item.id===data.id);if(oldIndex>-1)state.projects[oldIndex]=data;else state.projects.unshift(data);if(data.featured)state.projects.forEach(item=>{if(item.id!==data.id)item.featured=false});persist(oldIndex>-1?'Portföy güncellendi':'Portföy oluşturuldu');document.querySelector('#project-dialog').close();renderAll();await cleanupMedia([...collectMedia(oldProject),...removedMediaRefs])}catch(error){for(const ref of created)await mediaStore.remove(ref).catch(()=>{});console.error(error);toast('Dosyalar kaydedilemedi. Tarayıcı depolama alanını kontrol et.')}finally{saveButton.disabled=false;saveButton.textContent='Portföyü kaydet'}}
+async function saveProject(form){const saveButton=form.querySelector('button[type="submit"]');const oldProject=state.projects.find(item=>item.id===form.elements.id.value);const created=[];saveButton.disabled=true;saveButton.textContent='Dosyalar kaydediliyor…';try{let cover=form.elements.cover.value.trim()||'assets/poster-5.jpg';if(pendingCoverFile){const id=await mediaStore.put(pendingCoverFile);cover='upload:'+id;created.push(cover)}const imported=[];for(const file of pendingVideoFiles){const id=await mediaStore.put(file);const ref='upload:'+id;created.push(ref);imported.push(ref)}const data={id:form.elements.id.value||`project-${Date.now()}`,brand:form.elements.brand.value.trim(),title:form.elements.title.value.trim(),role:form.elements.role.value.trim(),cover,files:[...editorFileRefs,...imported],featured:form.elements.featured.checked};const oldIndex=state.projects.findIndex(item=>item.id===data.id);if(oldIndex>-1)state.projects[oldIndex]=data;else state.projects.unshift(data);if(data.featured)state.projects.forEach(item=>{if(item.id!==data.id)item.featured=false});await persist(oldIndex>-1?'Portföy güncellendi':'Portföy oluşturuldu');document.querySelector('#project-dialog').close();renderAll();await cleanupMedia([...collectMedia(oldProject),...removedMediaRefs])}catch(error){for(const ref of created)await mediaStore.remove(ref).catch(()=>{});console.error(error);toast('Dosyalar kaydedilemedi. Tarayıcı depolama alanını kontrol et.')}finally{saveButton.disabled=false;saveButton.textContent='Portföyü kaydet'}}
 function askDelete(id){pendingDelete=id;document.querySelector('#confirm-dialog').hidden=false}
-async function deleteProject(){if(!pendingDelete)return;const target=state.projects.find(item=>item.id===pendingDelete);state.projects=state.projects.filter(item=>item.id!==pendingDelete);pendingDelete=null;document.querySelector('#confirm-dialog').hidden=true;persist('Portföy silindi');renderAll();await cleanupMedia(collectMedia(target))}
-function renderAll(){renderOverview();renderProjects()}
-function switchView(name){document.querySelectorAll('.view').forEach(view=>view.classList.toggle('active-view',view.id===`view-${name}`));document.querySelectorAll('.nav-item').forEach(view=>view.classList.toggle('active',view.dataset.view===name));const titles={overview:['ÇALIŞMA ALANI','Genel bakış'],projects:['İÇERİK YÖNETİMİ','Portföyler'],content:['SAYFA İÇERİĞİ','Hakkında'],settings:['GENEL YAPILANDIRMA','Site ayarları']};document.querySelector('#view-kicker').textContent=titles[name][0];document.querySelector('#view-title').textContent=titles[name][1];document.querySelector('.sidebar').classList.remove('open');if(name==='content')fillForm(document.querySelector('#about-form'),state.site);if(name==='settings'){const values={...state.site};const config=runtimeConfig();if(!values.supabaseUrl)values.supabaseUrl=config.url;if(!values.supabaseAnonKey)values.supabaseAnonKey=config.key;fillForm(document.querySelector('#settings-form'),values)}}
-function safeFileName(name){return String(name||'media').normalize('NFKD').replace(/[^a-zA-Z0-9._-]+/g,'-').replace(/^-+|-+$/g,'').slice(0,100)||'media'}
-async function uploadMediaRef(ref,config,token){if(!isMediaRef(ref))return ref;const entry=await mediaStore.get(ref);if(!entry?.blob)throw new Error(`Medya bulunamadı: ${ref}`);const path=`uploads/${entry.id}-${safeFileName(entry.name)}`;const response=await fetch(`${config.url}/storage/v1/object/portfolio-media/${encodeURIComponent(path).replace(/%2F/g,'/')}`,{method:'POST',headers:{apikey:config.key,Authorization:`Bearer ${token}`,'Content-Type':entry.type||'application/octet-stream','x-upsert':'true'},body:entry.blob});if(!response.ok)throw new Error(await response.text());return `${config.url}/storage/v1/object/public/portfolio-media/${path.split('/').map(encodeURIComponent).join('/')}`}
-async function remotePayload(config,token){const payload={site:{...state.site},projects:[]};delete payload.site.supabaseUrl;delete payload.site.supabaseAnonKey;for(const project of state.projects){const copy={...project};copy.cover=await uploadMediaRef(copy.cover,config,token);copy.files=[];for(const file of project.files||[])copy.files.push(await uploadMediaRef(file,config,token));payload.projects.push(copy)}return payload}
-async function syncSupabase(){const config=configuredSupabase();const token=sessionGet(SUPABASE_SESSION_KEY);if(!config.url||!config.key){toast('Önce Supabase URL ve Publishable/anon key gir');switchView('settings');return}if(!token){toast('Supabase oturumu bulunamadı · çıkış yapıp tekrar giriş yap');return}const button=document.querySelector('#sync-supabase');button.disabled=true;button.textContent='Dosyalar yükleniyor...';try{const payload=await remotePayload(config,token);button.textContent='Senkronize ediliyor...';const response=await fetch(`${config.url}/rest/v1/site_content?on_conflict=id`,{method:'POST',headers:{apikey:config.key,Authorization:`Bearer ${token}`,'Content-Type':'application/json',Prefer:'resolution=merge-duplicates'},body:JSON.stringify({id:'main',payload,updated_at:new Date().toISOString()})});const responseText=await response.text();if(!response.ok)throw new Error(`HTTP ${response.status}: ${responseText||'Supabase isteği reddedildi'}`);const badge=document.querySelector('.integration-state');if(badge){badge.textContent='Bağlı';badge.classList.remove('pending')}toast('Supabase senkronizasyonu tamamlandı')}catch(error){console.error(error);const detail=String(error?.message||'Bilinmeyen hata').replace(/\s+/g,' ').slice(0,220);toast(`Supabase bağlantısı kurulamadı · ${detail}`)}finally{button.disabled=false;button.textContent='Supabase’a senkronize et ↗'}}
+async function deleteProject(){if(!pendingDelete)return;const target=state.projects.find(item=>item.id===pendingDelete);state.projects=state.projects.filter(item=>item.id!==pendingDelete);pendingDelete=null;document.querySelector('#confirm-dialog').hidden=true;await persist('Portföy silindi');renderAll();await cleanupMedia(collectMedia(target))}
+function renderAll(){renderOverview();renderProjects();if(typeof renderAlbums==='function')renderAlbums()}
+function switchView(name){
+  document.querySelectorAll('.view').forEach(view=>view.classList.toggle('active-view',view.id==='view-'+name));
+  document.querySelectorAll('.nav-item').forEach(view=>view.classList.toggle('active',view.dataset.view===name));
+  const titles={overview:['ÇALIŞMA ALANI','Genel bakış'],projects:['İÇERİK YÖNETİMİ','Portföyler'],albums:['FOTOĞRAF','Albümler'],content:['SAYFA İÇERİĞİ','Hakkında'],settings:['GENEL YAPILANDIRMA','Site ayarları']};
+  document.querySelector('#view-kicker').textContent=titles[name][0];document.querySelector('#view-title').textContent=titles[name][1];
+  document.querySelector('.sidebar').classList.remove('open');
+  if(name==='content')fillForm(document.querySelector('#about-form'),state.site);
+  if(name==='settings')fillForm(document.querySelector('#settings-form'),state.site);
+}
+function normalizeState(payload){return {site:{...DEFAULT_SITE,...payload.site},projects:payload.projects||[],albums:payload.albums||[]}}
+function exportDraft(){
+  const data=JSON.parse(JSON.stringify(state));delete data.site.supabaseUrl;delete data.site.supabaseAnonKey;
+  const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));
+  const link=document.createElement('a');link.href=url;link.download='emir-taslak-'+Date.now()+'.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+async function loadPublished(){
+  const row=await cloud.read();revision=row?.updated_at||null;
+  const published=row?normalizeState(row.payload):{site:{...DEFAULT_SITE},projects:original.map(p=>({...p})),albums:[]};
+  let draft;try{draft=JSON.parse(storageGet(DRAFT_KEY)||'null')}catch(_){}
+  state=published;dirty=false;conflict=false;
+  if(draft?.dirty&&draft?.state){
+    state=normalizeState(draft.state);dirty=true;
+    conflict=draft.revision!==revision;
+    if(conflict){revision=draft.revision;showSaveError(new PortfolioCloud.CloudError('Yayındaki içerik bu taslaktan sonra değişti. Taslağını indirip güncel içeriği yükleyebilirsin.','conflict'))}
+  }
+  initialized=true;renderAll();setAuthenticated(true);
+  fillForm(document.querySelector('#about-form'),state.site);fillForm(document.querySelector('#settings-form'),state.site);
+  if(!dirty){saveDraft();setSaveStatus('Yayındaki içerik güncel');document.querySelector('#save-error').hidden=true}
+  else if(!conflict)syncSupabase();
+}
+function showSaveError(error){
+  setSaveStatus('Değişiklikler henüz yayınlanmadı','error');
+  const banner=document.querySelector('#save-error');banner.hidden=false;
+  document.querySelector('#save-error-text').textContent=error.message;
+  document.querySelector('#reload-published').hidden=error.code!=='conflict';
+  document.querySelector('#retry-save').hidden=error.code==='conflict'||error.code==='auth';
+  if(error.code==='conflict')conflict=true;
+  if(error.code==='auth'){document.querySelectorAll('dialog[open]').forEach(d=>d.close());setAuthenticated(false);loginError.textContent=error.message;loginError.hidden=false}
+}
+async function resolveUpload(ref){
+  if(!isMediaRef(ref))return ref;
+  if(uploaded.has(ref))return uploaded.get(ref);
+  const entry=await mediaStore.get(ref);
+  if(!entry?.blob)throw new PortfolioCloud.CloudError('Bir medya dosyası bu tarayıcıda bulunamadı. Dosyayı yeniden seç.','storage');
+  const url=await cloud.upload(entry);uploaded.set(ref,url);return url;
+}
+async function remotePayload(snapshot){
+  const payload=JSON.parse(JSON.stringify(snapshot));delete payload.site.supabaseUrl;delete payload.site.supabaseAnonKey;
+  for(const project of payload.projects){project.cover=await resolveUpload(project.cover);for(let i=0;i<project.files.length;i++)project.files[i]=await resolveUpload(project.files[i])}
+  for(const album of payload.albums||[]){album.cover=await resolveUpload(album.cover);for(const photo of album.photos)photo.src=await resolveUpload(photo.src)}
+  return payload;
+}
+function applyUploadedUrls(){
+  for(const project of state.projects){project.cover=uploaded.get(project.cover)||project.cover;project.files=project.files.map(ref=>uploaded.get(ref)||ref)}
+  for(const album of state.albums||[]){album.cover=uploaded.get(album.cover)||album.cover;for(const photo of album.photos)photo.src=uploaded.get(photo.src)||photo.src}
+}
+function syncSupabase(){
+  if(saving)return saving;
+  if(!initialized||!dirty||conflict)return Promise.resolve(false);
+  clearTimeout(retryTimer);
+  saving=(async()=>{
+    try{
+      while(dirty){
+        const savingGeneration=generation;
+        setSaveStatus('Dosyalar ve içerik yayınlanıyor…','saving');
+        const payload=await remotePayload(state);
+        const row=await cloud.save(payload,revision);revision=row.updated_at;
+        applyUploadedUrls();dirty=generation!==savingGeneration;saveDraft();
+      }
+      retryCount=0;document.querySelector('#save-error').hidden=true;setSaveStatus('Kaydedildi · Yayında');toast('Kaydedildi. Değişiklikler yayında.');renderAll();return true;
+    }catch(error){
+      saveDraft();showSaveError(error);
+      if(error.code==='network'&&navigator.onLine){retryTimer=setTimeout(syncSupabase,Math.min(60000,5000*2**retryCount++))}
+      return false;
+    }finally{saving=null}
+  })();return saving;
+}
+async function handleLogin(event){
+  event.preventDefault();const form=event.currentTarget;const button=form.querySelector('button[type="submit"]');
+  const username=form.elements.username.value.trim();const password=form.elements.password.value;
+  loginError.hidden=true;button.disabled=true;button.textContent='Giriş yapılıyor…';
+  try{
+    if(!username||!password)throw new Error('Kullanıcı adı ve parolanı gir.');
+    if(username!=='admin'&&username.toLowerCase()!==SUPABASE_ADMIN_EMAIL)throw new Error('Kullanıcı adı veya parola hatalı.');
+    await cloud.signIn(SUPABASE_ADMIN_EMAIL,password);await loadPublished();
+  }catch(error){loginError.textContent=error.code==='request'?'Kullanıcı adı veya parola hatalı.':error.message;loginError.hidden=false}
+  finally{button.disabled=false;button.textContent='Giriş yap ↗'}
+}
+async function logout(){
+  if(saving)await saving;
+  clearTimeout(retryTimer);initialized=false;setAuthenticated(false);cloud.signOut();
+}
+async function boot(){
+  // Keep production aliases on one administration origin. Local previews stay local.
+  if(['emir-sahin-web-site.vercel.app','www.emrsahin.com'].includes(location.hostname)){location.replace(ADMIN_URL);return}
+  const config=runtimeConfig();
+  if(!config.url||!(config.publishableKey||config.anonKey)){
+    loginError.textContent='Bu adreste yönetim bağlantısı hazır değil. Ana panel: emrsahin.com/admin/';loginError.hidden=false;
+    document.querySelector('#login-form button').disabled=true;return;
+  }
+  if(cloud.hasSession()){
+    try{await loadPublished()}catch(error){loginError.textContent=error.message;loginError.hidden=false;setAuthenticated(false)}
+  }
+}
+document.querySelector('#login-form').addEventListener('submit',handleLogin);
+document.querySelector('#logout-button').addEventListener('click',logout);
+document.querySelector('#retry-save').onclick=()=>syncSupabase();
+document.querySelector('#download-draft').onclick=exportDraft;
+document.querySelector('#reload-published').onclick=async()=>{
+  if(!confirm('Taslağın yedek olarak indirilecek; ardından yayındaki güncel içerik açılacak. Devam edilsin mi?'))return;
+  exportDraft();try{const row=await cloud.read();state=normalizeState(row?.payload||{site:DEFAULT_SITE,projects:original,albums:[]});revision=row?.updated_at||null;dirty=false;conflict=false;saveDraft();renderAll();switchView('overview');document.querySelector('#save-error').hidden=true;setSaveStatus('Yayındaki içerik güncel')}catch(error){showSaveError(error)}
+};
+window.addEventListener('online',()=>{if(dirty&&!conflict)syncSupabase()});
+window.addEventListener('beforeunload',event=>{if(dirty||saving){event.preventDefault();event.returnValue=''}});
 
 document.querySelectorAll('[data-view]').forEach(button=>button.addEventListener('click',()=>switchView(button.dataset.view)));
 document.querySelectorAll('[data-action="new"]').forEach(button=>button.addEventListener('click',()=>openEditor()));
@@ -85,7 +195,8 @@ document.querySelector('#project-dialog').addEventListener('close',()=>{clearCov
 document.querySelector('#confirm-delete').onclick=deleteProject;
 document.querySelector('#cancel-delete').onclick=()=>{pendingDelete=null;document.querySelector('#confirm-dialog').hidden=true};
 document.querySelector('#about-form').addEventListener('submit',event=>{event.preventDefault();state.site=siteFrom(event.currentTarget);persist('Hakkında kaydedildi')});
-document.querySelector('#settings-form').addEventListener('submit',event=>{event.preventDefault();state.site=siteFrom(event.currentTarget);const config=configuredSupabase();state.site.supabaseUrl=config.url;state.site.supabaseAnonKey=config.key;persist('Ayarlar kaydedildi')});
-document.querySelector('#sync-supabase').onclick=syncSupabase;
+document.querySelector('#settings-form').addEventListener('submit',event=>{event.preventDefault();state.site=siteFrom(event.currentTarget);persist()});
+
 document.querySelector('#menu-toggle').onclick=()=>document.querySelector('.sidebar').classList.toggle('open');
 renderAll();
+boot();
