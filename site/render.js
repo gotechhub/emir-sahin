@@ -17,14 +17,17 @@
     return `<a class="featured-film" href="${projectUrl(p)}" data-project="${esc(p.id)}" aria-label="${esc(p.brand+' — '+p.title)}"><div class="triptych ${covers.length===1?'single':''}">${covers.map((cover,i)=>`<img src="${esc(image(cover))}" alt="${esc(p.brand+' — '+p.title)}" ${i===0?'fetchpriority="high"':''} width="640" height="800">`).join('')}</div><span class="feature-top">ÖNE ÇIKAN PROJE</span><span class="play-disc" aria-hidden="true">▶</span><span class="feature-bottom"><span><strong>${esc(p.brand)}</strong><span>${esc(p.title)}</span></span><span class="watch">FİLMLERİ İZLE ↗</span></span></a><div class="feature-credit"><span>${esc(p.role)}</span><span>${(p.files||[]).length} film</span></div>`;
   }
   function albums(state){return (state.albums||[]).map(a=>`<article class="project"><a class="album-open project-open" href="${albumUrl(a)}" data-album="${esc(a.id)}"><div class="album-cover"><img src="${esc(image(a.cover||a.photos[0]?.src))}" alt="${esc(a.title+' albüm kapağı')}" loading="lazy" width="800" height="600"><span>${a.photos.length} FOTOĞRAF</span></div><div class="project-meta"><h3>${esc(a.title)}</h3><span aria-hidden="true">↗</span></div><p class="project-title">${esc(a.description)}</p></a></article>`).join('')}
-  // Only files present in /site/brands are rendered as images. Other clients
-  // remain visible as text wordmarks until an approved source asset is added.
-  const logos={DESA:'desa.svg',MediaMarkt:'mediamarkt.svg',Twist:'twist.svg','İpekyol':'ipekyol.svg'};
+  // Source files and provenance are kept in /site/brands.
+  const logos={DESA:'desa.svg',adL:'adl.png',Communite:'communite.jpg',Mavi:'mavi.svg',MediaMarkt:'mediamarkt.svg','Calvin Klein':'calvin-klein.svg',Twist:'twist.svg','İpekyol':'ipekyol.svg','Suzi X':'suzix.png','Aurelia Genève Beauty':'aurelia.svg','Harper’s Bazaar Türkiye':'harpers-bazaar.svg'};
+  const artistNames=new Set(['Ozbi','Mert Demir','Feel Real Fest']);
   function brands(state){
     const names=[...new Set(state.projects.map(p=>p.brand).filter(Boolean))];
     if(!names.length)return '';
-    const group=hidden=>`<div class="brand-group" ${hidden?'aria-hidden="true"':''}>${names.map(name=>`<span class="brand-logo">${logos[name]?`<img src="/brands/${logos[name]}" alt="${esc(name)}" width="170" height="65" loading="lazy">`:`<span class="brand-wordmark">${esc(name)}</span>`}</span>`).join('')}</div>`;
-    return `<div class="brands-heading"><p>PROJELERİNDE YER ALDIĞIM MARKALAR</p><button id="toggle-brands" type="button" aria-pressed="false" aria-label="Logo hareketini duraklat">Duraklat Ⅱ</button></div><div class="brand-window"><div class="brand-track">${group(false)+group(true)}</div></div>`;
+    const clients=names.filter(name=>!artistNames.has(name));
+    const artists=names.filter(name=>artistNames.has(name));
+    const group=hidden=>`<div class="brand-group" ${hidden?'aria-hidden="true"':''}>${clients.map(name=>`<span class="brand-logo${name==='adL'?' brand-logo--adl':name==='Communite'?' brand-logo--communite':''}">${logos[name]?`<img src="/brands/${logos[name]}" alt="${esc(name)}" width="170" height="65" loading="lazy">`:`<span class="brand-wordmark">${esc(name)}</span>`}</span>`).join('')}</div>`;
+    const strip=clients.length?`<div class="brands-heading"><p>PROJELERİNDE YER ALDIĞIM MARKALAR</p><button id="toggle-brands" type="button" aria-pressed="false" aria-label="Logo hareketini duraklat">Duraklat Ⅱ</button></div><div class="brand-window"><div class="brand-track">${group(false)+group(true)}</div></div>`:'';
+    return strip+(artists.length?`<div class="artist-credits"><p>SANATÇILAR & ETKİNLİKLER</p><ul>${artists.map(name=>`<li>${esc(name)}</li>`).join('')}</ul></div>`:'');
   }
   function meta(state,{project,album,revision}={}){
     const site=state.site;const title=project?project.brand+' — '+project.title+' | Emir Selahattin Şahin':album?album.title+' | Emir Selahattin Şahin':site.seoTitle||'Emir Selahattin Şahin | İstanbul Yönetmen & Film Yapımcısı';
