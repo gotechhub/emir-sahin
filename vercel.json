@@ -1,8 +1,6 @@
 {
   "cleanUrls": true,
   "redirects": [
-    { "source": "/admin/:path*", "has": [{ "type": "host", "value": "emir-sahin-web-site.vercel.app" }], "destination": "https://emrsahin.com/admin/", "permanent": true },
-    { "source": "/admin/:path*", "has": [{ "type": "host", "value": "www.emrsahin.com" }], "destination": "https://emrsahin.com/admin/", "permanent": true },
     { "source": "/index.html", "destination": "/", "permanent": true }
   ],
   "rewrites": [

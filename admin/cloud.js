@@ -5,8 +5,8 @@
     constructor(message, code = 'network') { super(message); this.code = code; }
   }
   function createClient(config, options = {}) {
-    const url = String(config.url || '').replace(/\/$/, '');
-    const key = config.publishableKey || config.anonKey || config.key || '';
+    const url = String(config.url || '').trim().replace(/\/$/, '');
+    const key = String(config.publishableKey || config.anonKey || config.key || '').trim();
     const fetcher = options.fetch || scope.fetch.bind(scope);
     const storage = options.storage || scope.sessionStorage;
     let session = null;
@@ -43,6 +43,7 @@
       let data;
       try { data = raw ? JSON.parse(raw) : null; } catch (_) { data = null; }
       if (!response.ok) {
+        if (/invalid api key/i.test(data?.message || '')) throw new CloudError('Supabase bağlantı anahtarı geçersiz. Vercel bağlantı ayarı güncellenmeli.', 'config');
         if (response.status === 401) {
           clearSession();
           throw new CloudError('Oturumun sona erdi. Tekrar giriş yap; taslağın korunuyor.', 'auth');

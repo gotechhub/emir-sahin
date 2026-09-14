@@ -1,5 +1,4 @@
 const SUPABASE_ADMIN_EMAIL='respongo@gmail.com';
-const ADMIN_URL='https://emrsahin.com/admin/';
 const loginScreen=document.querySelector('#admin-login');
 const adminApp=document.querySelector('.admin-app');
 const loginError=document.querySelector('#login-error');
@@ -148,7 +147,7 @@ async function handleLogin(event){
   loginError.hidden=true;button.disabled=true;button.textContent='Giriş yapılıyor…';
   try{
     if(!username||!password)throw new Error('Kullanıcı adı ve parolanı gir.');
-    if(username!=='admin'&&username.toLowerCase()!==SUPABASE_ADMIN_EMAIL)throw new Error('Kullanıcı adı veya parola hatalı.');
+    if(username!=='admin')throw new Error('Kullanıcı adı veya parola hatalı.');
     await cloud.signIn(SUPABASE_ADMIN_EMAIL,password);await loadPublished();
   }catch(error){loginError.textContent=error.code==='request'?'Kullanıcı adı veya parola hatalı.':error.message;loginError.hidden=false}
   finally{button.disabled=false;button.textContent='Giriş yap ↗'}
@@ -158,13 +157,14 @@ async function logout(){
   clearTimeout(retryTimer);initialized=false;setAuthenticated(false);cloud.signOut();
 }
 async function boot(){
-  // Keep production aliases on one administration origin. Local previews stay local.
-  if(['emir-sahin-web-site.vercel.app','www.emrsahin.com'].includes(location.hostname)){location.replace(ADMIN_URL);return}
+  // Every supported domain serves the same panel and published Supabase content.
+  // Do not redirect assets or create a loop with Vercel's domain redirect.
   const config=runtimeConfig();
   if(!config.url||!(config.publishableKey||config.anonKey)){
-    loginError.textContent='Bu adreste yönetim bağlantısı hazır değil. Ana panel: emrsahin.com/admin/';loginError.hidden=false;
+    loginError.textContent='Yönetim bağlantısı eksik. Vercel Supabase ayarlarını kontrol et.';loginError.hidden=false;
     document.querySelector('#login-form button').disabled=true;return;
   }
+  document.querySelector('#login-form button').disabled=false;
   if(cloud.hasSession()){
     try{await loadPublished()}catch(error){loginError.textContent=error.message;loginError.hidden=false;setAuthenticated(false)}
   }
