@@ -15,7 +15,7 @@ function renderAlbums(){
     row.querySelector('[data-edit-album]').onclick=()=>openAlbum(album.id);
     row.querySelector('[data-delete-album]').onclick=async()=>{
       if(!confirm('“'+album.title+'” albümü yayından kaldırılsın mı?'))return;
-      state.albums=state.albums.filter(item=>item.id!==album.id);persist();renderAlbums();await cleanupMedia(collectMedia(album));
+      state.albums=state.albums.filter(item=>item.id!==album.id);const published=await persist();renderAlbums();if(published)await cleanupMedia(collectMedia(album));
     };
     row.querySelectorAll('[data-order]').forEach(button=>button.onclick=()=>{
       const next=index+Number(button.dataset.order);if(next<0||next>=state.albums.length)return;
@@ -24,10 +24,11 @@ function renderAlbums(){
   });
 }
 function openAlbum(id){
+  if(albumBusy)return;
   const current=state.albums?.find(item=>item.id===id);
   albumDraft=current?JSON.parse(JSON.stringify(current)):{id:'album-'+crypto.randomUUID(),title:'',description:'',cover:'',photos:[]};
   document.querySelector('#album-dialog-title').textContent=current?'Albümü düzenle':'Yeni albüm';
-  const form=document.querySelector('#album-form');form.reset();form.elements.title.value=albumDraft.title;form.elements.description.value=albumDraft.description||'';
+  const form=document.querySelector('#album-form');form.reset();form.querySelector('[data-save-feedback]')?.remove();form.elements.title.value=albumDraft.title;form.elements.description.value=albumDraft.description||'';
   renderAlbumPhotos();albumDialog.showModal();
 }
 function renderAlbumPhotos(){
@@ -64,8 +65,13 @@ document.querySelector('#album-form').onsubmit=async event=>{
       album.photos.push({src,alt:photo.alt.trim()||album.title+' — fotoğraf '+(index+1)});
     }
     const index=state.albums.findIndex(item=>item.id===album.id);if(index===-1)state.albums.push(album);else state.albums[index]=album;
-    await persist();albumDialog.close();renderAlbums();await cleanupMedia(collectMedia(old));
-  }catch(error){for(const ref of created)await mediaStore.remove(ref).catch(()=>{});toast('Fotoğraflar saklanamadı. Tarayıcının depolama alanını kontrol et.')}
+    // Preserve imported files on a network/auth failure; retries must not duplicate them.
+    for(const photo of albumDraft.photos)if(photo.file)URL.revokeObjectURL(photo.src);
+    albumDraft=JSON.parse(JSON.stringify(album));
+    const published=await persist();renderAlbums();
+    if(published){albumDialog.close();await cleanupMedia(collectMedia(old))}
+    else if(albumDialog.open)renderAlbumPhotos();
+  }catch(error){await cleanupMedia(created);showSaveError(new PortfolioCloud.CloudError('Fotoğraflar saklanamadı. Seçimlerin korunuyor; tarayıcının depolama alanını kontrol et.','storage'))}
   finally{albumBusy=false;form.querySelectorAll('button,input,textarea').forEach(node=>node.disabled=false)}
 };
 document.querySelector('#close-album').onclick=document.querySelector('#cancel-album').onclick=()=>{if(!albumBusy)albumDialog.close()};

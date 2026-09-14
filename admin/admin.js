@@ -26,6 +26,7 @@ let pendingVideoFiles=[];
 let pendingCoverFile=null;
 let removedMediaRefs=new Set();
 let coverPreviewUrl=null;
+let projectBusy=false;
 
 function isMediaRef(value){return mediaStore?.isRef?.(value)===true}
 function mediaPath(value){if(!value)return 'assets/poster-5.jpg';return value.startsWith('assets/')||value.startsWith('videos/')||/^https?:\/\//i.test(value)?value:'assets/'+value}
@@ -42,7 +43,9 @@ function saveDraft(){
   catch(_){setSaveStatus('Tarayıcı taslağı saklayamadı; sayfayı açık tut','error');return false}
 }
 function persist(){
-  dirty=true;generation++;saveDraft();setSaveStatus('Yayınlanıyor…','saving');
+  dirty=true;generation++;saveDraft();
+  if(conflict){showSaveError(new PortfolioCloud.CloudError('Taslağın korundu. Başka bir oturumun değişikliklerini ezmemek için yayındaki sürümü yükle.','conflict'));return Promise.resolve(false)}
+  setSaveStatus('Yayınlanıyor…','saving');
   return syncSupabase();
 }
 function toast(message){const n=document.querySelector('#toast');n.textContent=message;n.classList.add('show');clearTimeout(window.__toast);window.__toast=setTimeout(()=>n.classList.remove('show'),2600)}
@@ -59,8 +62,38 @@ function movePendingFile(index,delta){const next=index+delta;if(next<0||next>=pe
 function renderVideoList(){const list=document.querySelector('#video-list');list.replaceChildren();if(!editorFileRefs.length&&!pendingVideoFiles.length){list.innerHTML='<p class="media-empty">Henüz video eklenmedi. Birden fazla dosyayı aynı anda seçebilirsin.</p>';return}editorFileRefs.forEach((ref,index)=>{const row=document.createElement('div');row.className='media-row';row.innerHTML='<span class="media-index">'+String(index+1).padStart(2,'0')+'</span><div class="media-info"><strong>'+esc(isMediaRef(ref)?(mediaStore.label(ref)||'İçe aktarılan dosya'):(String(ref).split('/').pop()||ref))+'</strong><small>'+esc(isMediaRef(ref)?'Tarayıcıya kaydedildi':'Bağlantı / site dosyası')+'</small></div><div class="media-order" aria-label="Video sırası"><button type="button" data-move="-1" aria-label="Videoyu yukarı taşı"'+(index===0?' disabled':'')+'>↑</button><button type="button" data-move="1" aria-label="Videoyu aşağı taşı"'+(index===editorFileRefs.length-1?' disabled':'')+'>↓</button></div><button type="button" class="media-remove" aria-label="Videoyu çıkar">×</button>';row.querySelector('[data-move="-1"]').onclick=()=>moveEditorFile(index,-1);row.querySelector('[data-move="1"]').onclick=()=>moveEditorFile(index,1);row.querySelector('.media-remove').onclick=()=>{if(isMediaRef(ref))removedMediaRefs.add(ref);editorFileRefs.splice(index,1);document.querySelector('#project-form [name="files"]').value=editorFileRefs.join('\n');renderVideoList()};list.append(row);if(isMediaRef(ref))mediaStore.get(ref).then(entry=>{const strong=row.querySelector('strong');if(entry&&strong)strong.textContent=entry.name}).catch(()=>{})});pendingVideoFiles.forEach((file,index)=>{const row=document.createElement('div');row.className='media-row pending';row.innerHTML='<span class="media-index">＋</span><div class="media-info"><strong>'+esc(file.name)+'</strong><small>Yeni dosya · '+formatBytes(file.size)+'</small></div><div class="media-order" aria-label="Yeni video sırası"><button type="button" data-pending-move="-1" aria-label="Videoyu yukarı taşı"'+(index===0?' disabled':'')+'>↑</button><button type="button" data-pending-move="1" aria-label="Videoyu aşağı taşı"'+(index===pendingVideoFiles.length-1?' disabled':'')+'>↓</button></div><button type="button" class="media-remove" aria-label="Yeni videoyu çıkar">×</button>';row.querySelector('[data-pending-move="-1"]').onclick=()=>movePendingFile(index,-1);row.querySelector('[data-pending-move="1"]').onclick=()=>movePendingFile(index,1);row.querySelector('.media-remove').onclick=()=>{pendingVideoFiles.splice(index,1);renderVideoList()};list.append(row)})}
 function syncFilesField(){const field=document.querySelector('#project-form [name="files"]');editorFileRefs=field.value.split(/\r?\n/).map(value=>value.trim()).filter(Boolean);renderVideoList()}
 function resetEditorMedia(){pendingVideoFiles=[];pendingCoverFile=null;removedMediaRefs=new Set();clearCoverPreview();const coverFile=document.querySelector('#cover-file');const videoFiles=document.querySelector('#video-files');if(coverFile)coverFile.value='';if(videoFiles)videoFiles.value=''}
-function openEditor(id){const form=document.querySelector('#project-form');const project=id?state.projects.find(item=>item.id===id):{id:'',brand:'',title:'',role:'',cover:'assets/poster-5.jpg',files:[],featured:false};if(!project)return;resetEditorMedia();document.querySelector('#dialog-title').textContent=id?'Portföyü düzenle':'Yeni portföy';form.reset();fillForm(form,{...project,files:(project.files||[]).join('\n')});editorFileRefs=[...(project.files||[])];renderVideoList();renderCoverPreview(project.cover||'assets/poster-5.jpg');document.querySelector('#project-dialog').showModal()}
-async function saveProject(form){const saveButton=form.querySelector('button[type="submit"]');const oldProject=state.projects.find(item=>item.id===form.elements.id.value);const created=[];saveButton.disabled=true;saveButton.textContent='Dosyalar kaydediliyor…';try{let cover=form.elements.cover.value.trim()||'assets/poster-5.jpg';if(pendingCoverFile){const id=await mediaStore.put(pendingCoverFile);cover='upload:'+id;created.push(cover)}const imported=[];for(const file of pendingVideoFiles){const id=await mediaStore.put(file);const ref='upload:'+id;created.push(ref);imported.push(ref)}const data={id:form.elements.id.value||`project-${Date.now()}`,brand:form.elements.brand.value.trim(),title:form.elements.title.value.trim(),role:form.elements.role.value.trim(),cover,files:[...editorFileRefs,...imported],featured:form.elements.featured.checked};const oldIndex=state.projects.findIndex(item=>item.id===data.id);if(oldIndex>-1)state.projects[oldIndex]=data;else state.projects.unshift(data);if(data.featured)state.projects.forEach(item=>{if(item.id!==data.id)item.featured=false});await persist(oldIndex>-1?'Portföy güncellendi':'Portföy oluşturuldu');document.querySelector('#project-dialog').close();renderAll();await cleanupMedia([...collectMedia(oldProject),...removedMediaRefs])}catch(error){for(const ref of created)await mediaStore.remove(ref).catch(()=>{});console.error(error);toast('Dosyalar kaydedilemedi. Tarayıcı depolama alanını kontrol et.')}finally{saveButton.disabled=false;saveButton.textContent='Portföyü kaydet'}}
+function openEditor(id){if(projectBusy)return;const form=document.querySelector('#project-form');const project=id?state.projects.find(item=>item.id===id):{id:'',brand:'',title:'',role:'',cover:'assets/poster-5.jpg',files:[],featured:false};if(!project)return;resetEditorMedia();document.querySelector('#dialog-title').textContent=id?'Portföyü düzenle':'Yeni portföy';form.reset();fillForm(form,{...project,files:(project.files||[]).join('\n')});editorFileRefs=[...(project.files||[])];renderVideoList();renderCoverPreview(project.cover||'assets/poster-5.jpg');form.querySelector('[data-save-feedback]')?.remove();document.querySelector('#project-dialog').showModal()}
+async function saveProject(form){
+  if(projectBusy)return;
+  const saveButton=form.querySelector('button[type="submit"]');
+  const oldProject=state.projects.find(item=>item.id===form.elements.id.value);
+  const created=[];const retired=[...collectMedia(oldProject),...removedMediaRefs];
+  projectBusy=true;form.querySelectorAll('button,input,textarea').forEach(node=>node.disabled=true);
+  saveButton.textContent='Dosyalar kaydediliyor…';
+  try{
+    let cover=form.elements.cover.value.trim()||'assets/poster-5.jpg';
+    if(pendingCoverFile){cover='upload:'+await mediaStore.put(pendingCoverFile);created.push(cover)}
+    const imported=[];
+    for(const file of pendingVideoFiles){const ref='upload:'+await mediaStore.put(file);created.push(ref);imported.push(ref)}
+    const data={id:form.elements.id.value||'project-'+crypto.randomUUID(),brand:form.elements.brand.value.trim(),title:form.elements.title.value.trim(),role:form.elements.role.value.trim(),cover,files:[...editorFileRefs,...imported],featured:form.elements.featured.checked};
+    const oldIndex=state.projects.findIndex(item=>item.id===data.id);
+    if(oldIndex>-1)state.projects[oldIndex]=data;else state.projects.unshift(data);
+    if(data.featured)state.projects.forEach(item=>{if(item.id!==data.id)item.featured=false});
+    // Retrying a failed publish reuses these imports and the same project ID.
+    form.elements.id.value=data.id;form.elements.cover.value=data.cover;
+    editorFileRefs=[...data.files];form.elements.files.value=data.files.join('\n');
+    pendingCoverFile=null;pendingVideoFiles=[];
+    const published=await persist();renderAll();
+    if(published){document.querySelector('#project-dialog').close();await cleanupMedia(retired)}
+    else{renderVideoList();renderCoverPreview(data.cover)}
+  }catch(error){
+    await cleanupMedia(created);
+    showSaveError(new PortfolioCloud.CloudError('Dosyalar saklanamadı. Seçimlerin korunuyor; tarayıcının depolama alanını kontrol edip yeniden dene.','storage'));
+  }finally{
+    projectBusy=false;form.querySelectorAll('button,input,textarea').forEach(node=>node.disabled=false);
+    saveButton.textContent='Portföyü kaydet';renderVideoList();
+  }
+}
 function askDelete(id){pendingDelete=id;document.querySelector('#confirm-dialog').hidden=false}
 async function deleteProject(){if(!pendingDelete)return;const target=state.projects.find(item=>item.id===pendingDelete);state.projects=state.projects.filter(item=>item.id!==pendingDelete);pendingDelete=null;document.querySelector('#confirm-dialog').hidden=true;await persist('Portföy silindi');renderAll();await cleanupMedia(collectMedia(target))}
 function renderAll(){renderOverview();renderProjects();if(typeof renderAlbums==='function')renderAlbums()}
@@ -98,6 +131,11 @@ function showSaveError(error){
   setSaveStatus('Değişiklikler henüz yayınlanmadı','error');
   const banner=document.querySelector('#save-error');banner.hidden=false;
   document.querySelector('#save-error-text').textContent=error.message;
+  document.querySelectorAll('dialog[open] form').forEach(form=>{
+    let feedback=form.querySelector('[data-save-feedback]');
+    if(!feedback){feedback=document.createElement('p');feedback.dataset.saveFeedback='';feedback.className='save-error';feedback.setAttribute('role','alert');form.append(feedback)}
+    feedback.textContent=error.message+' Değişiklikler henüz yayınlanmadı.';
+  });
   document.querySelector('#reload-published').hidden=error.code!=='conflict';
   document.querySelector('#retry-save').hidden=error.code==='conflict'||error.code==='auth';
   if(error.code==='conflict')conflict=true;
@@ -122,7 +160,8 @@ function applyUploadedUrls(){
 }
 function syncSupabase(){
   if(saving)return saving;
-  if(!initialized||!dirty||conflict)return Promise.resolve(false);
+  if(!initialized||conflict)return Promise.resolve(false);
+  if(!dirty)return Promise.resolve(true);
   clearTimeout(retryTimer);
   saving=(async()=>{
     try{
@@ -133,7 +172,7 @@ function syncSupabase(){
         const row=await cloud.save(payload,revision);revision=row.updated_at;
         applyUploadedUrls();dirty=generation!==savingGeneration;saveDraft();
       }
-      retryCount=0;document.querySelector('#save-error').hidden=true;setSaveStatus('Kaydedildi · Yayında');toast('Kaydedildi. Değişiklikler yayında.');renderAll();return true;
+      retryCount=0;document.querySelector('#save-error').hidden=true;document.querySelectorAll('[data-save-feedback]').forEach(node=>node.remove());setSaveStatus('Kaydedildi · Yayında');toast('Kaydedildi. Değişiklikler yayında.');renderAll();return true;
     }catch(error){
       saveDraft();showSaveError(error);
       if(error.code==='network'&&navigator.onLine){retryTimer=setTimeout(syncSupabase,Math.min(60000,5000*2**retryCount++))}
@@ -154,7 +193,7 @@ async function handleLogin(event){
 }
 async function logout(){
   if(saving)await saving;
-  clearTimeout(retryTimer);initialized=false;setAuthenticated(false);cloud.signOut();
+  clearTimeout(retryTimer);initialized=false;setAuthenticated(false);await cloud.signOut();
 }
 async function boot(){
   // Every supported domain serves the same panel and published Supabase content.
@@ -189,8 +228,9 @@ document.querySelector('#cover-file').addEventListener('change',event=>{pendingC
 document.querySelector('#project-form [name="cover"]').addEventListener('input',event=>{if(pendingCoverFile&&event.target.value.trim()){pendingCoverFile=null;document.querySelector('#cover-file').value=''}renderCoverPreview(event.target.value.trim())});
 document.querySelector('#remove-cover').addEventListener('click',()=>{const current=document.querySelector('#project-form [name="cover"]').value.trim();if(isMediaRef(current))removedMediaRefs.add(current);pendingCoverFile=null;document.querySelector('#cover-file').value='';document.querySelector('#project-form [name="cover"]').value='assets/poster-5.jpg';renderCoverPreview('assets/poster-5.jpg')});
 document.querySelector('#video-files').addEventListener('change',event=>{const incoming=Array.from(event.target.files||[]);const known=new Set(pendingVideoFiles.map(file=>`${file.name}:${file.size}:${file.lastModified}`));pendingVideoFiles=[...pendingVideoFiles,...incoming.filter(file=>{const key=`${file.name}:${file.size}:${file.lastModified}`;if(known.has(key))return false;known.add(key);return true})];event.target.value='';renderVideoList()});
-document.querySelector('#close-dialog').onclick=()=>document.querySelector('#project-dialog').close();
-document.querySelector('#cancel-dialog').onclick=()=>document.querySelector('#project-dialog').close();
+document.querySelector('#close-dialog').onclick=()=>{if(!projectBusy)document.querySelector('#project-dialog').close()};
+document.querySelector('#cancel-dialog').onclick=()=>{if(!projectBusy)document.querySelector('#project-dialog').close()};
+document.querySelector('#project-dialog').addEventListener('cancel',event=>{if(projectBusy)event.preventDefault()});
 document.querySelector('#project-dialog').addEventListener('close',()=>{clearCoverPreview();pendingVideoFiles=[];pendingCoverFile=null;removedMediaRefs=new Set()});
 document.querySelector('#confirm-delete').onclick=deleteProject;
 document.querySelector('#cancel-delete').onclick=()=>{pendingDelete=null;document.querySelector('#confirm-dialog').hidden=true};

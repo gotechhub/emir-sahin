@@ -1,5 +1,5 @@
 (function (scope) {
-  const ORIGIN='https://emrsahin.com';
+  const ORIGIN='https://www.emrsahin.com';
   const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
   const json=value=>JSON.stringify(value).replace(/</g,'\\u003c');
   function asset(value,folder='assets'){

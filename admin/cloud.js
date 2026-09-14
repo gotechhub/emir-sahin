@@ -31,17 +31,20 @@
       try {
         response = await fetcher(url + path, {
           cache: 'no-store', ...init,
-          signal: init.signal || (path.startsWith('/storage/') ? undefined : AbortSignal.timeout(30000)),
+          signal: init.signal || AbortSignal.timeout(path.startsWith('/storage/') ? 15 * 60 * 1000 : 30000),
           headers: { apikey: key, ...(auth ? { Authorization: `Bearer ${token}` } : {}), ...init.headers }
         });
       } catch (_) { throw new CloudError('Bağlantı kurulamadı. Değişikliklerin bu tarayıcıda korunuyor.'); }
+      let raw;
+      try { raw = await response.text(); }
+      catch (_) { throw new CloudError('Sunucu yanıtı tamamlanamadı. Değişikliklerin korunuyor; yeniden denenecek.'); }
+      let data;
+      try { data = raw ? JSON.parse(raw) : null; } catch (_) { data = null; }
+      if (!response.ok && /invalid api key/i.test(data?.message || '')) throw new CloudError('Supabase bağlantı anahtarı geçersiz. Vercel bağlantı ayarı güncellenmeli.', 'config');
       if (response.status === 401 && auth && retry && session?.refresh_token) {
         await refresh();
         return request(path, init, auth, false);
       }
-      const raw = await response.text();
-      let data;
-      try { data = raw ? JSON.parse(raw) : null; } catch (_) { data = null; }
       if (!response.ok) {
         if (/invalid api key/i.test(data?.message || '')) throw new CloudError('Supabase bağlantı anahtarı geçersiz. Vercel bağlantı ayarı güncellenmeli.', 'config');
         if (response.status === 401) {
@@ -68,7 +71,7 @@
           saveSession(data);
           return session.access_token;
         } catch (error) {
-          if (error.code !== 'network') { clearSession(); throw new CloudError('Oturumun sona erdi. Tekrar giriş yap; taslağın korunuyor.', 'auth'); }
+          if (error.code !== 'network' && error.code !== 'config') { clearSession(); throw new CloudError('Oturumun sona erdi. Tekrar giriş yap; taslağın korunuyor.', 'auth'); }
           throw error;
         } finally { refreshing = null; }
       })();

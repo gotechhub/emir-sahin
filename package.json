@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "description": "Emir Selahattin Şahin portfolio and admin dashboard",
   "scripts": {
+    "test": "node --test scripts/admin-regression.test.cjs",
     "build": "node scripts/build.mjs",
     "build:vercel": "node scripts/build.mjs --vercel",
     "start": "node scripts/serve.mjs"

@@ -3,4 +3,4 @@ Allow: /
 Disallow: /admin/
 Disallow: /api/
 
-Sitemap: https://emrsahin.com/sitemap.xml
+Sitemap: https://www.emrsahin.com/sitemap.xml

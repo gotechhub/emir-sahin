@@ -19,10 +19,11 @@ async function published(){
 }
 module.exports=async function handler(req,res){
   const {state,revision,degraded}=await published();
-  const requestUrl=new URL(req.url,'https://emrsahin.com');
+  const requestUrl=new URL(req.url,render.ORIGIN);
   const kind=req.query?.kind||requestUrl.searchParams.get('kind')||'home';
   const id=req.query?.id||requestUrl.searchParams.get('id');
-  res.setHeader('Cache-Control',degraded?'no-store':'public, max-age=0, s-maxage=30, stale-while-revalidate=60');
+  // Admin saves are published immediately; never serve a previous revision from CDN cache.
+  res.setHeader('Cache-Control','no-store');
   if(kind==='sitemap'){
     const urls=['/',...state.projects.map(render.projectUrl),...(state.albums||[]).map(render.albumUrl)];
     res.setHeader('Content-Type','application/xml; charset=utf-8');
