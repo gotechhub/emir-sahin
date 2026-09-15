@@ -14,7 +14,10 @@ fs.mkdirSync(dist, { recursive: true });
 // while the public page itself contains no admin navigation or references.
 fs.cpSync(path.join(root, 'admin'), path.join(dist, 'admin'), { recursive: true });
 for (const entry of fs.readdirSync(site)) {
-  if (entry !== 'videos') fs.cpSync(path.join(site, entry), path.join(dist, entry), { recursive: true });
+  // index.html is excluded too: copying it verbatim would recreate the same
+  // shadowing problem (a static dist/index.html unrendered by render.js —
+  // no title, meta, JSON-LD, or project content until client JS runs).
+  if (entry !== 'videos' && entry !== 'index.html') fs.cpSync(path.join(site, entry), path.join(dist, entry), { recursive: true });
 }
 const runtimeConfig = {
   url: process.env.SUPABASE_URL || '',
