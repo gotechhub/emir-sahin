@@ -11,8 +11,12 @@
   function open(value,start=0){if(!value?.photos?.length)return;album=value;document.querySelector('#gallery-title').textContent=value.title;show(start);dialog.showModal();document.body.classList.add('modal-open')}
   const close=()=>dialog.close();document.querySelector('#close-gallery').onclick=close;
   document.querySelector('#photo-prev').onclick=()=>show(index-1);document.querySelector('#photo-next').onclick=()=>show(index+1);
-  const full=document.querySelector('#photo-fullscreen');if(!dialog.requestFullscreen)full.hidden=true;full.onclick=async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await dialog.requestFullscreen()}catch(_){full.hidden=true}};
-  dialog.addEventListener('close',()=>{if(document.fullscreenElement===dialog)document.exitFullscreen().catch(()=>{});document.body.classList.remove('modal-open');document.querySelector('#gallery-image').removeAttribute('src')});
+  const stage=dialog.querySelector('.gallery-stage');
+  // Chrome/Safari refuse requestFullscreen() on a <dialog> itself ("Dialog
+  // elements are invalid"), so the target has to be a plain child element —
+  // the stage that wraps the image — not the dialog.
+  const full=document.querySelector('#photo-fullscreen');if(!stage.requestFullscreen)full.hidden=true;full.onclick=async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await stage.requestFullscreen()}catch(_){full.hidden=true}};
+  dialog.addEventListener('close',()=>{if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});document.body.classList.remove('modal-open');document.querySelector('#gallery-image').removeAttribute('src')});
   dialog.addEventListener('keydown',event=>{if(event.key==='ArrowLeft'){event.preventDefault();show(index-1)}if(event.key==='ArrowRight'){event.preventDefault();show(index+1)}});
   dialog.addEventListener('click',event=>{if(event.target!==dialog)return;const rect=dialog.getBoundingClientRect();if(event.clientX<rect.left||event.clientX>rect.right||event.clientY<rect.top||event.clientY>rect.bottom)close()});
   dialog.querySelector('.gallery-stage').addEventListener('touchstart',event=>touchX=event.touches.length===1?event.touches[0].clientX:null,{passive:true});

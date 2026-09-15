@@ -26,7 +26,7 @@ window.projects=[
     "cover": "media1-mp4.jpg"
   },
   {
-    "id": "communitе",
+    "id": "communite",
     "brand": "Communite",
     "title": "Sosyal medya çıkış kampanyası",
     "role": "Kamera operatörü",

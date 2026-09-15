@@ -25,9 +25,14 @@ const adminHtml=fs.readFileSync(path.join(root,'admin/index.html'),'utf8');
 assert(/id="cover-file"[^>]*type="file"/.test(adminHtml),'Cover import input missing');
 assert(/id="video-files"[^>]*multiple/.test(adminHtml),'Multiple video import input missing');
 assert(fs.readFileSync(path.join(root,'admin/admin.js'),'utf8').includes('mediaStore.put'),'Admin media persistence missing');
-for(const directory of ['site','dist']){
-  const html=fs.readFileSync(path.join(root,directory,'index.html'),'utf8');
+// dist/ intentionally has no index.html: the homepage is always served by
+// api/page.js (see scripts/build.mjs), never a static build-time snapshot.
+assert(!fs.existsSync(path.join(root,'dist/index.html')),'dist/index.html would shadow the SSR homepage route');
+{
+  const html=fs.readFileSync(path.join(root,'site/index.html'),'utf8');
   assert(!/admin|Yönetim/.test(html),'Admin must not be in the public page');
+}
+for(const directory of ['site','dist']){
   assert(!fs.existsSync(path.join(root,directory,'admin.html')));
   assert(!fs.existsSync(path.join(root,directory,'admin.js')));
 }
