@@ -146,7 +146,9 @@ async function resolveUpload(ref){
   if(uploaded.has(ref))return uploaded.get(ref);
   const entry=await mediaStore.get(ref);
   if(!entry?.blob)throw new PortfolioCloud.CloudError('Bir medya dosyası bu tarayıcıda bulunamadı. Dosyayı yeniden seç.','storage');
-  const url=await cloud.upload(entry);uploaded.set(ref,url);return url;
+  const label=entry.name||'medya';
+  const url=await cloud.upload(entry,(loaded,total)=>{const pct=total?Math.round(loaded/total*100):0;setSaveStatus('Yükleniyor · '+label+' · %'+pct,'saving')});
+  uploaded.set(ref,url);return url;
 }
 async function remotePayload(snapshot){
   const payload=JSON.parse(JSON.stringify(snapshot));delete payload.site.supabaseUrl;delete payload.site.supabaseAnonKey;

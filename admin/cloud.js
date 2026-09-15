@@ -124,13 +124,72 @@
       }
       return rows[0];
     }
-    async function upload(entry) {
-      const name = String(entry.name || 'media').normalize('NFKD').replace(/[^a-zA-Z0-9._-]+/g, '-').slice(0, 100);
-      const path = `uploads/${entry.id}-${name}`;
-      const encoded = path.split('/').map(encodeURIComponent).join('/');
+    // Small files: a single request. It is capped by the browser/proxy and is
+    // unreliable for large media, so only used under the resumable threshold.
+    async function uploadStandard(entry, encoded) {
       await request('/storage/v1/object/portfolio-media/' + encoded, {
         method: 'POST', headers: { 'Content-Type': entry.type || 'application/octet-stream', 'x-upsert': 'true' }, body: entry.blob
       }, true);
+    }
+    // Large files: TUS resumable upload in 6 MB chunks. Survives brief drops,
+    // reports progress, and lets Supabase accept files well beyond a single POST.
+    async function uploadResumable(entry, path, size, onProgress) {
+      const b64 = value => btoa(unescape(encodeURIComponent(String(value))));
+      const metadata = [
+        'bucketName ' + b64('portfolio-media'),
+        'objectName ' + b64(path),
+        'contentType ' + b64(entry.type || 'application/octet-stream'),
+        'cacheControl ' + b64('3600')
+      ].join(',');
+      const auth = async () => ({ apikey: key, authorization: 'Bearer ' + (await accessToken()), 'Tus-Resumable': '1.0.0' });
+      const mapStatus = (status, fallback) => {
+        if (status === 401) { clearSession(); return new CloudError('Oturumun sona erdi. Tekrar giriş yap; taslağın korunuyor.', 'auth'); }
+        if (status === 403) return new CloudError('Kaydetme izni yok. Supabase medya izinlerini kontrol et.', 'permission');
+        if (status === 413) return new CloudError('Dosya, depolama hizmetinin yükleme sınırını aşıyor. Supabase bucket ve plan limitini kontrol et.', 'storage');
+        return new CloudError(fallback + ' (sunucu ' + status + ')', status >= 500 || status === 429 ? 'network' : 'request');
+      };
+      let response;
+      try {
+        response = await fetcher(url + '/storage/v1/upload/resumable', {
+          method: 'POST', signal: AbortSignal.timeout(30000),
+          headers: { ...(await auth()), 'Upload-Length': String(size), 'Upload-Metadata': metadata, 'x-upsert': 'true' }
+        });
+      } catch (_) { throw new CloudError('Bağlantı kurulamadı. Değişikliklerin bu tarayıcıda korunuyor.'); }
+      if (!response.ok && response.status !== 201) throw mapStatus(response.status, 'Yükleme başlatılamadı.');
+      let location = response.headers.get('Location') || response.headers.get('location');
+      if (!location) throw new CloudError('Dosya yükleme başlatılamadı. Supabase medya deposunu kontrol et.', 'storage');
+      if (!/^https?:\/\//i.test(location)) location = url + (location.startsWith('/') ? '' : '/') + location;
+      const chunkSize = 6 * 1024 * 1024;
+      let offset = 0;
+      if (onProgress) onProgress(0, size);
+      while (offset < size) {
+        const end = Math.min(offset + chunkSize, size);
+        let patch;
+        try {
+          patch = await fetcher(location, {
+            method: 'PATCH', body: entry.blob.slice(offset, end), signal: AbortSignal.timeout(15 * 60 * 1000),
+            headers: { ...(await auth()), 'Upload-Offset': String(offset), 'Content-Type': 'application/offset+octet-stream' }
+          });
+        } catch (_) { throw new CloudError('Yükleme kesildi. Değişikliklerin korunuyor; bağlantı gelince yeniden denenecek.'); }
+        if (patch.status === 409 || patch.status === 460) {
+          // Offset mismatch: ask the server where it stopped, then continue.
+          const head = await fetcher(location, { method: 'HEAD', headers: await auth() });
+          const server = Number(head.headers.get('Upload-Offset'));
+          if (!Number.isFinite(server)) throw new CloudError('Yükleme sürdürülemedi. Yeniden dene.', 'storage');
+          offset = server; if (onProgress) onProgress(offset, size); continue;
+        }
+        if (!patch.ok && patch.status !== 204) throw mapStatus(patch.status, 'Dosya yüklenemedi.');
+        offset = Number(patch.headers.get('Upload-Offset')) || end;
+        if (onProgress) onProgress(offset, size);
+      }
+    }
+    async function upload(entry, onProgress) {
+      const name = String(entry.name || 'media').normalize('NFKD').replace(/[^a-zA-Z0-9._-]+/g, '-').slice(0, 100);
+      const path = `uploads/${entry.id}-${name}`;
+      const encoded = path.split('/').map(encodeURIComponent).join('/');
+      const size = Number(entry.size) || (entry.blob && entry.blob.size) || 0;
+      if (size > 6 * 1024 * 1024) await uploadResumable(entry, path, size, onProgress);
+      else await uploadStandard(entry, encoded);
       return url + '/storage/v1/object/public/portfolio-media/' + encoded;
     }
     return { signIn, signOut, read, save, upload, hasSession: () => Boolean(session?.access_token), accessToken };
