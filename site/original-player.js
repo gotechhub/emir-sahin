@@ -5,9 +5,7 @@ window.originalPlayer = (() => {
   let generation = 0;
   const video = document.getElementById('player');
   const status = document.getElementById('media-status');
-  const download = document.getElementById('download-original');
   const error = document.getElementById('video-error');
-  const direct = document.getElementById('video-direct');
 
   function release() {
     generation += 1;
@@ -19,7 +17,6 @@ window.originalPlayer = (() => {
     if (blobUrl) URL.revokeObjectURL(blobUrl);
     blobUrl = null;
     status.hidden = true;
-    download.hidden = true;
     error.hidden = true;
   }
 
@@ -37,12 +34,10 @@ window.originalPlayer = (() => {
     status.textContent = 'Video yükleniyor…';
     try {
       let source = url;
-      let downloadName = name;
       if (window.mediaStore?.isRef?.(file)) {
         const uploaded = await window.mediaStore.resolve(file);
         if (!uploaded) throw new Error('Uploaded video unavailable');
         source = uploaded.url;
-        downloadName = uploaded.name || downloadName;
       } else if (record) {
         let loaded = 0;
         const parts = [];
@@ -67,10 +62,6 @@ window.originalPlayer = (() => {
       }
       if (current !== generation) return;
       video.src = source;
-      direct.href = source;
-      download.href = source;
-      download.download = downloadName;
-      download.hidden = false;
       video.load();
       video.play().catch(() => { if (current === generation) status.hidden = true; });
     } catch (failure) {
